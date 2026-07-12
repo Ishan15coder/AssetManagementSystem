@@ -6,7 +6,7 @@
 
 ## What is AssetFlow?
 
-Organizations of every shape and size — schools, hospitals, factories, offices, agencies — deal with the same quiet problem: nobody really knows where things are, who has them, or what condition they're in. Spreadsheets fill up, paper logs get lost, and assets quietly slip through the cracks.
+Organizations of every shape and size — schools, hospitals, factories, offices, agencies. Deal with the same quiet problem: nobody really knows where things are, who has them, or what condition they're in. Spreadsheets fill up, paper logs get lost, and assets quietly slip through the cracks.
 
 AssetFlow fixes that!
 
