@@ -5,8 +5,8 @@ const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 let prismaClient: PrismaClient;
 
-// Connect to Turso in production, fall back to local SQLite for development
-if (process.env.NODE_ENV === "production" && process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
+// Connect to Turso if credentials are provided (locally or in production)
+if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
   const adapter = new PrismaLibSQL({
     url: process.env.TURSO_DATABASE_URL,
     authToken: process.env.TURSO_AUTH_TOKEN,
