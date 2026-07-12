@@ -12,7 +12,7 @@ AssetFlow fixes that!
 
 It gives your organization a single, structured system for managing the full lifecycle of every asset. From the moment it's registered to the day it's retired or disposed of. Asset managers can register and allocate equipment, department heads can oversee what their teams hold, employees can book shared resources and raise maintenance requests, and auditors can run structured verification cycles that actually close.
 
-The system is intentionally scoped to asset and resource management. It doesn't touch purchasing, invoicing, or accounting. It does one thing and tries to do it well.
+The system is intentionally scoped to core asset and resource management, rather than full-blown ERP accounting, though it includes a **Financial Valuation module** to track baseline straight-line depreciation of inventory.
 
 ---
 
@@ -60,9 +60,19 @@ Three-tab master data management for everything  else in the system to depend on
 A central register for every asset in your organization:
 
 - Register assets with: name, category, auto-generated Asset Tag (e.g. `AF-0001`), serial number, acquisition date, acquisition cost, condition, location, photo and documents, and a "shared/bookable" flag
-- Search and filter by Asset Tag, serial number, QR code, category, status, department, or location
+- Search and filter by Asset Tag, serial number, QR code, category, status, department, or location, along with **Advanced Filters** for acquisition cost ranges and dates
+- **Bulk Actions & Multi-Select**: Perform bulk updates to asset status or bulk delete records with full audit logging
+- **Enterprise Data Management**: Server-side pagination for infinite scalability and native CSV Export functionality directly from the directory
 - Full lifecycle status visible per asset
 - Per-asset history combining allocation history and maintenance history in a single timeline
+- **Built-in QR Scanner Simulator** to emulate physical field operations directly from the browser
+
+### Interactive Visualizations & Analytics
+
+All modules feature embedded business intelligence widgets:
+
+- **Recharts Integration**: Beautiful, high-density pie charts and bar charts on directory pages for instantaneous status and condition breakdowns.
+- Real-time role distribution graphs in the Org Setup view.
 
 ### Asset Lifecycle
 
@@ -388,8 +398,10 @@ A role switcher in the UI lets you jump between accounts without re-entering cre
 
 | Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/assets` | List assets — filterable by category, department, location, status, tag |
-| `POST` | `/api/assets` | Register a new asset with photo upload (Asset Manager only) |
+| `GET` | `/api/assets` | List assets (paginated) — filterable by category, department, location, status, tag, and cost ranges |
+| `POST` | `/api/assets` | Register a new asset (Asset Manager only) |
+| `POST` | `/api/assets/bulk` | Bulk update or delete multiple assets in a single transaction |
+| `POST` | `/api/assets/upload` | Upload physical photos or PDF documentation attachments for assets |
 | `GET` | `/api/assets/:id/history` | Full combined timeline — allocations, maintenance, movements |
 
 ### Allocations & Bookings
@@ -429,7 +441,7 @@ The UI is built around a modern, flat, high-density ERP design layout. It uses s
 
 Planned enhancements to turn AssetFlow into a fully-featured enterprise ecosystem:
 
-1. **Native Barcode & QR Scanner Integration**: Allow field agents to scan physical asset labels using their mobile device's camera to instantly view histories or perform check-ins.
+1. **Native Mobile App (React Native)**: Extend the current web-based QR scanner simulation into a true native mobile application for offline field agents using device cameras.
 2. **Third-Party Notifications**: Push alerts for overdue returns, maintenance approvals, and booking reminders directly to Slack, Microsoft Teams, or email.
 3. **Predictive Maintenance Scheduling**: Analyze historical breakdown frequencies to automatically generate preventative maintenance tasks before an asset fails.
 4. **Offline Sync**: Enable auditors working in remote locations/warehouses with poor connectivity to perform audit cycles offline and sync changes once back online.
