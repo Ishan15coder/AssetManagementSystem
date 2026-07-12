@@ -302,7 +302,10 @@ npm install
 
 ### 2. Configure Environment Variables
 
-Copy the example environment file and fill in your values:
+> **🚀 Want to skip local setup?**
+> If you are part of the team and just want to connect to the live shared demo database, **contact me (Ananay)** for the Turso Database URL and the correct `.env` credentials!
+
+Otherwise, to set up your own local environment from scratch, copy the example environment file and fill in your values:
 
 ```bash
 cp .env.example .env
@@ -311,10 +314,13 @@ cp .env.example .env
 Open `.env` and set the following:
 
 ```env
-# Database — keep this as-is for local SQLite development
+# Database configuration (Turso URL or local SQLite)
 DATABASE_URL="file:./dev.db"
 
-# JWT secret — replace with a secure random string for any non-local environment
+# Turso Auth Token (Required if using Turso, leave blank for local SQLite)
+TURSO_AUTH_TOKEN="your-turso-auth-token-here"
+
+# JWT Auth Secret for signing session cookies / tokens
 # Generate one with: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 JWT_SECRET="your-secure-random-secret-here"
 ```
