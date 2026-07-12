@@ -2,12 +2,12 @@
 
 /* ─── Tokens: cream + black only, no blue ─────────────────────── */
 :root {
-  /* Content background: warm cream */
-  --bg:            oklch(96% 0.014 80);
-  --surface:       oklch(99.5% 0.005 80);
-  --surface-2:     oklch(93%  0.018 80);
-  --border:        oklch(84%  0.016 80);
-  --border-subtle: oklch(90%  0.01  80);
+  /* Content background: refined warm sandstone cream */
+  --bg:            oklch(94.5% 0.012 80);
+  --surface:       oklch(99.5% 0.003 80);
+  --surface-2:     oklch(91.5% 0.016 80);
+  --border:        oklch(14%  0.008 80 / 0.08);
+  --border-subtle: oklch(14%  0.008 80 / 0.04);
 
   /* Sidebar: dark oatmeal */
   --sidebar-bg:        oklch(18%  0.01 75);
@@ -37,10 +37,10 @@
   --danger:        oklch(48%  0.17  22);
   --danger-bg:     oklch(96%  0.035 22);
 
-  /* Shadows */
-  --shadow-xs: 0 1px 3px oklch(14% 0.008 80 / 0.08);
-  --shadow-sm: 0 2px 6px oklch(14% 0.008 80 / 0.1), 0 1px 2px oklch(14% 0.008 80 / 0.06);
-  --shadow-md: 0 4px 14px oklch(14% 0.008 80 / 0.11), 0 2px 4px oklch(14% 0.008 80 / 0.06);
+  /* Refined, softer warm-toned shadows to pop cards off the background */
+  --shadow-xs: 0 1px 2px oklch(14% 0.008 80 / 0.03);
+  --shadow-sm: 0 4px 16px oklch(14% 0.008 80 / 0.04), 0 1px 2px oklch(14% 0.008 80 / 0.02);
+  --shadow-md: 0 12px 36px oklch(14% 0.008 80 / 0.07), 0 3px 8px oklch(14% 0.008 80 / 0.03);
 
   /* Motion */
   --ease-out:      cubic-bezier(0.16, 1, 0.3, 1);
@@ -158,23 +158,22 @@ html, body {
   animation: mesh-drift 18s ease-in-out infinite;
 }
 
-/* Grain overlay pseudo-element */
+/* Grain overlay pseudo-element (Static paper/canvas feel, no vibrating animation) */
 .mesh-bg::before {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.22;
+  opacity: 0.045;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.72' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23g)' opacity='1'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 200px 200px;
-  animation: grain-shift 0.12s steps(1) infinite;
 }
 
 .mesh-bg > * { position: relative; z-index: 1; }
 
-/* Sidebar grain overlay */
+/* Sidebar grain overlay (Static textured feel, no vibrating animation) */
 .sidebar-grain {
   position: relative;
   overflow: hidden;
@@ -185,11 +184,10 @@ html, body {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.06;
+  opacity: 0.035;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23g)' opacity='1'/%3E%3C/svg%3E");
   background-repeat: repeat;
   background-size: 180px 180px;
-  animation: grain-shift 0.18s steps(1) infinite;
 }
 .sidebar-grain > * { position: relative; z-index: 1; }
 
