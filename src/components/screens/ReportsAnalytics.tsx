@@ -12,6 +12,9 @@ export default function ReportsAnalytics() {
     idle: [],
     nearingRetirement: [],
     heatmap: [],
+    portfolioByCategory: [],
+    portfolioByStatus: [],
+    totalPortfolioValue: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -420,6 +423,118 @@ export default function ReportsAnalytics() {
             <span>Peak Usage</span>
           </div>
         </div>
+        {/* Asset Portfolio Book Value */}
+        <div className="erp-card space-y-5 md:col-span-2">
+          {/* Total Value Banner */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 border-b border-(--border) pb-4">
+            <div>
+              <h2 className="text-xs font-semibold text-(--muted)">Asset Portfolio — Total Book Value</h2>
+              <p className="text-3xl font-extrabold tabular-nums mt-1" style={{ color: "var(--success)" }}>
+                ${data.totalPortfolioValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
+              <p className="text-[10px] text-(--muted) mt-0.5">Cumulative acquisition cost of all registered assets</p>
+            </div>
+            <button
+              onClick={() =>
+                exportCSV(
+                  "portfolio_book_value",
+                  ["Category", "Asset Count", "Total Book Value (USD)"],
+                  data.portfolioByCategory.map((c: any) => [
+                    c.category,
+                    c.assetCount,
+                    c.totalValue.toFixed(2),
+                  ])
+                )
+              }
+              className="text-[10px] font-bold text-(--accent) hover:underline self-start md:self-center"
+            >
+              Export CSV
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Category Breakdown Table */}
+            <div className="space-y-3">
+              <span className="text-[10px] uppercase font-bold text-(--muted)">Value by Category</span>
+              <div className="overflow-x-auto border border-(--border) rounded-(--radius-md) overflow-hidden">
+                <table className="erp-table">
+                  <thead>
+                    <tr>
+                      <th>Category</th>
+                      <th>Assets</th>
+                      <th>Book Value (USD)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.portfolioByCategory.length === 0 ? (
+                      <tr>
+                        <td colSpan={3} className="text-center py-4 text-xs text-(--muted)">
+                          No asset cost data available.
+                        </td>
+                      </tr>
+                    ) : (
+                      [...data.portfolioByCategory]
+                        .sort((a: any, b: any) => b.totalValue - a.totalValue)
+                        .map((item: any) => (
+                          <tr key={item.category}>
+                            <td className="font-semibold">{item.category}</td>
+                            <td className="tabular-nums text-xs">{item.assetCount}</td>
+                            <td className="tabular-nums font-bold text-xs" style={{ color: "var(--success)" }}>
+                              ${item.totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Book Value by Status Bar Chart */}
+            <div className="space-y-3">
+              <span className="text-[10px] uppercase font-bold text-(--muted)">Book Value by Asset Status</span>
+              {data.portfolioByStatus.length === 0 ? (
+                <p className="text-xs text-(--muted)">No data available.</p>
+              ) : (() => {
+                const maxVal = Math.max(...data.portfolioByStatus.map((s: any) => s.totalValue), 1);
+                return (
+                  <div className="space-y-3">
+                    {[...data.portfolioByStatus]
+                      .sort((a: any, b: any) => b.totalValue - a.totalValue)
+                      .map((item: any) => {
+                        const pct = Math.round((item.totalValue / maxVal) * 100) || 2;
+                        const color =
+                          item.status === "Available"
+                            ? "var(--success-text)"
+                            : item.status === "Allocated"
+                            ? "var(--accent)"
+                            : item.status === "UnderMaintenance"
+                            ? "var(--warning-text)"
+                            : "var(--danger-text)";
+                        return (
+                          <div key={item.status} className="space-y-1">
+                            <div className="flex justify-between text-xs font-medium">
+                              <span>{item.status}</span>
+                              <span className="tabular-nums" style={{ color }}>
+                                ${item.totalValue.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              </span>
+                            </div>
+                            <div className="w-full h-2 bg-(--background) border border-(--border) rounded-full overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{ width: `${pct}%`, background: color }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );

@@ -134,7 +134,41 @@ export async function GET() {
       count,
     }));
 
-    // 8. Dashboard KPIs: Maintenance Today, Pending Transfers, Upcoming Returns
+    // 8. Portfolio / Book Value by Category
+    const portfolioByCat = await db.asset.groupBy({
+      by: ["categoryId"],
+      _sum: { acquisitionCost: true },
+      _count: { _all: true },
+    });
+
+    const allCategories = await db.assetCategory.findMany({
+      select: { id: true, name: true },
+    });
+
+    const portfolioByCategory = portfolioByCat.map((item) => ({
+      category: allCategories.find((c) => c.id === item.categoryId)?.name || "Unknown",
+      totalValue: item._sum.acquisitionCost ?? 0,
+      assetCount: item._count._all,
+    }));
+
+    const portfolioByStatus = await db.asset.groupBy({
+      by: ["status"],
+      _sum: { acquisitionCost: true },
+      _count: { _all: true },
+    });
+
+    const portfolioByStatusMapped = portfolioByStatus.map((item) => ({
+      status: item.status,
+      totalValue: item._sum.acquisitionCost ?? 0,
+      assetCount: item._count._all,
+    }));
+
+    const totalPortfolioValue = portfolioByCategory.reduce(
+      (sum, item) => sum + item.totalValue,
+      0
+    );
+
+    // 9. Dashboard KPIs: Maintenance Today, Pending Transfers, Upcoming Returns
     const maintenanceToday = await db.maintenanceRequest.count({
       where: {
         status: { in: ["Approved", "InProgress"] },
@@ -174,6 +208,9 @@ export async function GET() {
       maintenanceToday,
       pendingTransfers,
       upcomingReturns,
+      portfolioByCategory,
+      portfolioByStatus: portfolioByStatusMapped,
+      totalPortfolioValue,
     });
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch reports and analytics" }, { status: 500 });
