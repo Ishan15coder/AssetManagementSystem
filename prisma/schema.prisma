@@ -27,6 +27,7 @@ model Employee {
   approvedTransfers TransferRequest[]  @relation("ApprovedBy")
   maintenance       MaintenanceRequest[]
   activityLogs      ActivityLog[]
+  notifications     Notification[]
 
   @@index([email])
 }
@@ -161,3 +162,14 @@ model ActivityLog {
   details    String
   timestamp  DateTime  @default(now())
 }
+
+model Notification {
+  id          Int      @id @default(autoincrement())
+  employeeId  Int
+  employee    Employee @relation(fields: [employeeId], references: [id])
+  type        String   // Info, Warning, Alert
+  message     String
+  isRead      Boolean  @default(false)
+  createdDate DateTime @default(now())
+}
+

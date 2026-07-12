@@ -20,6 +20,8 @@ export const assetSchema = z.object({
   condition: z.enum(["New", "Good", "Fair", "Poor"]),
   location: z.string().min(2, "Location details are required"),
   isBookable: z.boolean().default(false),
+  photoUrl: z.string().nullable().optional(),
+  documentUrl: z.string().nullable().optional(),
 });
 
 /*

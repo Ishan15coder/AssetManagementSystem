@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface MainLayoutProps {
   user: any;
@@ -37,6 +37,35 @@ export default function MainLayout({
   setActiveScreen,
 }: MainLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifs, setShowNotifs] = useState(false);
+
+  const fetchNotifs = async () => {
+    try {
+      const res = await fetch("/api/notifications");
+      const data = await res.json();
+      setNotifications(data.notifications || []);
+    } catch {}
+  };
+
+  useEffect(() => {
+    fetchNotifs();
+    const interval = setInterval(fetchNotifs, 15000); // Poll every 15s
+    return () => clearInterval(interval);
+  }, []);
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const handleMarkAllRead = async () => {
+    try {
+      await fetch("/api/notifications", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markAll: true }),
+      });
+      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+    } catch {}
+  };
 
   const isManager = user.role === "Admin" || user.role === "AssetManager";
   const filtered = menuItems.filter(m => {
@@ -114,25 +143,42 @@ export default function MainLayout({
             </p>
           </div>
         </div>
-        <button
-          onClick={onLogout}
-          className="w-full text-left text-xs px-1 py-1 rounded-(--radius-sm) transition-colors"
-          style={{ color: "var(--sidebar-muted)" }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = "var(--danger)"; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = "var(--sidebar-muted)"; }}
-        >
-          Sign out
-        </button>
+        <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-white/5">
+          <button
+            onClick={() => setShowNotifs(true)}
+            className="relative text-xs flex items-center gap-1.5 font-medium text-(--sidebar-muted) hover:text-(--sidebar-fg)"
+          >
+            <span className="relative flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+              </svg>
+              {unreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 h-3.5 w-3.5 bg-red-500 rounded-full text-[8px] font-bold text-white flex items-center justify-center animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
+            </span>
+            <span>Alerts</span>
+          </button>
+          
+          <button
+            onClick={onLogout}
+            className="text-xs transition-colors text-(--sidebar-muted) hover:text-red-400"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen flex" style={{ background: "var(--bg)" }}>
+    <div className="h-screen overflow-hidden flex" style={{ background: "var(--bg)" }}>
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-200 md:hidden"
+          className="fixed inset-0 z-[200] md:hidden"
           style={{ background: "oklch(0% 0 0 / 0.5)" }}
           onClick={() => setMobileOpen(false)}
         />
@@ -141,7 +187,7 @@ export default function MainLayout({
       {/* Sidebar */}
       <aside
         className={[
-          "fixed top-0 left-0 z-300 h-screen w-64 flex flex-col",
+          "fixed top-0 left-0 z-[300] h-screen w-64 flex flex-col",
           "md:translate-x-0 md:static md:z-auto",
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
         ].join(" ")}
@@ -151,10 +197,10 @@ export default function MainLayout({
       </aside>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden mesh-bg">
         {/* Mobile topbar */}
         <header
-          className="md:hidden flex items-center gap-3 px-4 py-3"
+          className="md:hidden flex items-center gap-3 px-4 py-3 shrink-0"
           style={{
             background: "var(--sidebar-bg)",
             borderBottom: "1px solid var(--sidebar-border)",
@@ -182,10 +228,74 @@ export default function MainLayout({
           </div>
         </header>
 
-        <main className="flex-1 p-6 lg:p-8 overflow-y-auto mesh-bg" style={{ maxWidth: "1280px", width: "100%", margin: "0 auto" }}>
+        <main className="flex-1 p-6 lg:p-8 overflow-y-auto" style={{ maxWidth: "1280px", width: "100%", margin: "0 auto" }}>
           {children}
         </main>
       </div>
+
+      {/* Notification Center Pop-up Modal */}
+      {showNotifs && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[500] flex items-center justify-center p-4 animate-fade-in">
+          <div className="erp-card w-full max-w-md space-y-4 max-h-[85vh] flex flex-col bg-(--surface) border border-(--border)">
+            <div className="flex justify-between items-center border-b border-(--border) pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-(--fg)">Notification Center</span>
+                {unreadCount > 0 && (
+                  <span className="badge badge-danger text-[10px]">{unreadCount} unread</span>
+                )}
+              </div>
+              <button
+                onClick={() => setShowNotifs(false)}
+                className="text-xs text-(--muted) hover:text-(--foreground) font-semibold"
+              >
+                Close
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 max-h-[50vh]">
+              {notifications.length === 0 ? (
+                <p className="text-xs text-center text-(--muted) py-8">No notifications yet.</p>
+              ) : (
+                notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    className={`p-3 border rounded-(--radius-sm) text-xs transition-colors ${
+                      n.isRead 
+                        ? "bg-(--background) border-(--border) opacity-60" 
+                        : "bg-white/5 border-(--accent) font-medium"
+                    }`}
+                  >
+                    <div className="flex justify-between items-baseline mb-1">
+                      <span className={`text-[9px] uppercase font-bold tracking-wider ${
+                        n.type === "Alert" 
+                          ? "text-(--danger-text)" 
+                          : n.type === "Warning" 
+                          ? "text-(--warning-text)" 
+                          : "text-(--success-text)"
+                      }`}>{n.type}</span>
+                      <span className="text-[10px] text-(--muted)">
+                        {new Date(n.createdDate).toLocaleDateString()} {new Date(n.createdDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-(--fg) leading-relaxed">{n.message}</p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {unreadCount > 0 && (
+              <div className="border-t border-(--border) pt-3">
+                <button
+                  onClick={handleMarkAllRead}
+                  className="erp-btn-secondary w-full text-xs font-semibold"
+                >
+                  Mark all as read
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

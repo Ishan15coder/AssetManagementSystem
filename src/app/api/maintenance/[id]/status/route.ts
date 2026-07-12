@@ -58,6 +58,15 @@ export async function PUT(
         });
       }
 
+      // Notify employee of maintenance update
+      await tx.notification.create({
+        data: {
+          employeeId: maintReq.employeeId,
+          type: status === "Rejected" ? "Warning" : "Info",
+          message: `Your maintenance request for asset ID: ${maintReq.assetId} has been updated to: ${status}.`,
+        },
+      });
+
       return updated;
     });
 

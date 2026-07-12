@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
     }
 
-    const { name, serialNumber, categoryId, acquisitionDate, acquisitionCost, condition, location, isBookable } = result.data;
+    const { name, serialNumber, categoryId, acquisitionDate, acquisitionCost, condition, location, isBookable, photoUrl, documentUrl } = result.data;
 
     // Check unique serial number
     const existing = await db.asset.findUnique({ where: { serialNumber } });
@@ -91,6 +91,8 @@ export async function POST(request: Request) {
         condition,
         location,
         isBookable,
+        photoUrl: photoUrl || null,
+        documentUrl: documentUrl || null,
         status: "Available",
       },
     });

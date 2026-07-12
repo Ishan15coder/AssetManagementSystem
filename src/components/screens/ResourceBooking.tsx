@@ -11,11 +11,18 @@ export default function ResourceBooking({ user }: ResourceBookingProps) {
   const [selectedAssetId, setSelectedAssetId] = useState("");
   const [bookings, setBookings] = useState<any[]>([]);
   
-  // Form Values
+  // Form Values - Create
   const [startDateStr, setStartDateStr] = useState("");
   const [startTimeStr, setStartTimeStr] = useState("");
   const [endDateStr, setEndDateStr] = useState("");
   const [endTimeStr, setEndTimeStr] = useState("");
+
+  // Reschedule Dialog state
+  const [reschedulingBooking, setReschedulingBooking] = useState<any | null>(null);
+  const [rescheduleDateStr, setRescheduleDateStr] = useState("");
+  const [rescheduleStartTimeStr, setRescheduleStartTimeStr] = useState("");
+  const [rescheduleEndDateStr, setRescheduleEndDateStr] = useState("");
+  const [rescheduleEndTimeStr, setRescheduleEndTimeStr] = useState("");
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -25,7 +32,6 @@ export default function ResourceBooking({ user }: ResourceBookingProps) {
     try {
       const res = await fetch("/api/assets");
       const data = await res.json();
-      // Only keep assets flagged as bookable
       const bookable = (data.assets || []).filter((a: any) => a.isBookable);
       setBookableAssets(bookable);
       if (bookable.length > 0 && !selectedAssetId) {
@@ -103,11 +109,54 @@ export default function ResourceBooking({ user }: ResourceBookingProps) {
     setError("");
     setSuccess("");
     try {
-      // For visual preview / cancellation trigger (we can delete or update status)
-      setBookings(bookings.map((b) => (b.id === bookingId ? { ...b, status: "Cancelled" } : b)));
-      setSuccess("Booking cancelled successfully (visual update)");
+      const res = await fetch(`/api/bookings/${bookingId}`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to cancel booking");
+
+      setSuccess("Booking cancelled successfully");
+      loadBookings();
     } catch (err: any) {
       setError(err.message);
+    }
+  };
+
+  const handleRescheduleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    setLoading(true);
+
+    const startISO = new Date(`${rescheduleDateStr}T${rescheduleStartTimeStr}:00Z`);
+    const endISO = new Date(`${rescheduleEndDateStr}T${rescheduleEndTimeStr}:00Z`);
+
+    if (startISO >= endISO) {
+      setError("Error: Start time must precede end time.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/bookings/${reschedulingBooking.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          startDate: startISO.toISOString(),
+          endDate: endISO.toISOString(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to reschedule booking");
+
+      setSuccess("Booking rescheduled successfully");
+      setReschedulingBooking(null);
+      loadBookings();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -194,12 +243,28 @@ export default function ResourceBooking({ user }: ResourceBookingProps) {
                         </td>
                         <td>
                           {(user.id === b.employeeId || user.role === "Admin" || user.role === "AssetManager") && (
-                            <button
-                              onClick={() => handleCancelBooking(b.id)}
-                              className="text-xs text-(--danger-text) font-semibold hover:underline"
-                            >
-                              Cancel
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  setReschedulingBooking(b);
+                                  const start = new Date(b.startDate);
+                                  const end = new Date(b.endDate);
+                                  setRescheduleDateStr(start.toISOString().split("T")[0]);
+                                  setRescheduleStartTimeStr(start.toISOString().substring(11, 16));
+                                  setRescheduleEndDateStr(end.toISOString().split("T")[0]);
+                                  setRescheduleEndTimeStr(end.toISOString().substring(11, 16));
+                                }}
+                                className="text-xs text-(--accent) font-semibold hover:underline"
+                              >
+                                Reschedule
+                              </button>
+                              <button
+                                onClick={() => handleCancelBooking(b.id)}
+                                className="text-xs text-(--danger-text) font-semibold hover:underline"
+                              >
+                                Cancel
+                              </button>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -268,6 +333,76 @@ export default function ResourceBooking({ user }: ResourceBookingProps) {
           </div>
         </div>
       </div>
+
+      {/* Reschedule Modal popup */}
+      {reschedulingBooking && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[500] flex items-center justify-center p-4">
+          <div className="erp-card w-full max-w-sm space-y-4 bg-(--surface) z-[500]">
+            <div className="flex justify-between items-center border-b border-(--border) pb-2">
+              <h3 className="text-sm font-semibold text-(--fg)">Reschedule Booking</h3>
+              <button onClick={() => setReschedulingBooking(null)} className="text-xs text-(--muted) hover:text-(--foreground)">
+                Cancel
+              </button>
+            </div>
+            <form onSubmit={handleRescheduleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col space-y-1">
+                  <label className="text-[10px] font-semibold text-(--muted)">Start Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={rescheduleDateStr}
+                    onChange={(e) => setRescheduleDateStr(e.target.value)}
+                    className="erp-input text-xs"
+                  />
+                </div>
+                <div className="flex flex-col space-y-1">
+                  <label className="text-[10px] font-semibold text-(--muted)">Start Time</label>
+                  <input
+                    type="time"
+                    required
+                    value={rescheduleStartTimeStr}
+                    onChange={(e) => setRescheduleStartTimeStr(e.target.value)}
+                    className="erp-input text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-col space-y-1">
+                  <label className="text-[10px] font-semibold text-(--muted)">End Date</label>
+                  <input
+                    type="date"
+                    required
+                    value={rescheduleEndDateStr}
+                    onChange={(e) => setRescheduleEndDateStr(e.target.value)}
+                    className="erp-input text-xs"
+                  />
+                </div>
+                <div className="flex flex-col space-y-1">
+                  <label className="text-[10px] font-semibold text-(--muted)">End Time</label>
+                  <input
+                    type="time"
+                    required
+                    value={rescheduleEndTimeStr}
+                    onChange={(e) => setRescheduleEndTimeStr(e.target.value)}
+                    className="erp-input text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="submit" className="erp-btn-primary text-xs" disabled={loading}>
+                  Save Changes
+                </button>
+                <button type="button" onClick={() => setReschedulingBooking(null)} className="erp-btn-secondary text-xs">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

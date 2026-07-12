@@ -9,6 +9,7 @@ interface MaintenanceManagementProps {
 export default function MaintenanceManagement({ user }: MaintenanceManagementProps) {
   const [requests, setRequests] = useState<any[]>([]);
   const [assets, setAssets] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   
   // New Request Form
   const [selectedAssetId, setSelectedAssetId] = useState("");
@@ -46,9 +47,20 @@ export default function MaintenanceManagement({ user }: MaintenanceManagementPro
     }
   };
 
+  const loadEmployees = async () => {
+    try {
+      const res = await fetch("/api/employees");
+      const data = await res.json();
+      setEmployees(data.employees || []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     loadRequests();
     loadAssets();
+    loadEmployees();
   }, []);
 
   const handleRaiseRequest = async (e: React.FormEvent) => {
@@ -117,67 +129,74 @@ export default function MaintenanceManagement({ user }: MaintenanceManagementPro
           {colRequests.length === 0 ? (
             <div className="text-center py-8 text-xs text-(--muted)">No requests in this stage.</div>
           ) : (
-            colRequests.map((req) => (
-              <div key={req.id} className="erp-card bg-(--background) border border-(--border) p-3 space-y-3">
-                <div className="flex justify-between items-start">
-                  <span className="tech-code text-(--accent) font-bold">{req.asset.tag}</span>
-                  <span className={`badge ${req.priority === "Critical" ? "badge-danger" : req.priority === "High" ? "badge-warning" : "badge-success"}`}>
-                    {req.priority}
-                  </span>
-                </div>
-                <div className="text-xs font-semibold">{req.asset.name}</div>
-                <p className="text-[11px] text-(--muted) leading-tight">{req.description}</p>
-                <div className="text-[10px] text-(--muted)">
-                  Raised by: {req.employee.name} | Status: <span className="font-semibold text-(--foreground)">{req.status}</span>
-                </div>
+            colRequests.map((req) => {
+              const tech = employees.find(e => e.id === req.assignedTechnicianId);
+              return (
+                <div key={req.id} className="erp-card bg-(--background) border border-(--border) p-3 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <span className="tech-code text-(--accent) font-bold">{req.asset.tag}</span>
+                    <span className={`badge ${req.priority === "Critical" ? "badge-danger" : req.priority === "High" ? "badge-warning" : "badge-success"}`}>
+                      {req.priority}
+                    </span>
+                  </div>
+                  <div className="text-xs font-semibold">{req.asset.name}</div>
+                  <p className="text-[11px] text-(--muted) leading-tight">{req.description}</p>
+                  <div className="text-[10px] text-(--muted) space-y-0.5">
+                    <div>Raised by: <span className="text-(--foreground) font-semibold">{req.employee.name}</span></div>
+                    {req.assignedTechnicianId && (
+                      <div>Technician: <span className="text-(--foreground) font-semibold">{tech ? tech.name : `ID: ${req.assignedTechnicianId}`}</span></div>
+                    )}
+                    <div>Status: <span className="font-semibold text-(--foreground)">{req.status}</span></div>
+                  </div>
 
-                {/* Workflow actions for Managers/Admins */}
-                {canManage && (
-                  <div className="pt-2 border-t border-(--border) flex flex-wrap gap-2">
-                    {req.status === "Pending" && (
-                      <>
+                  {/* Workflow actions for Managers/Admins */}
+                  {canManage && (
+                    <div className="pt-2 border-t border-(--border) flex flex-wrap gap-2">
+                      {req.status === "Pending" && (
+                        <>
+                          <button
+                            onClick={() => handleUpdateStatus(req.id, "Approved")}
+                            className="text-[10px] text-(--success-text) font-bold hover:underline"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => handleUpdateStatus(req.id, "Rejected")}
+                            className="text-[10px] text-(--danger-text) font-bold hover:underline"
+                          >
+                            Reject
+                          </button>
+                        </>
+                      )}
+                      {req.status === "Approved" && (
                         <button
-                          onClick={() => handleUpdateStatus(req.id, "Approved")}
+                          onClick={() => setActiveRequestForTech(req)}
+                          className="text-[10px] text-(--accent) font-bold hover:underline"
+                        >
+                          Assign Technician
+                        </button>
+                      )}
+                      {req.status === "Assigned" && (
+                        <button
+                          onClick={() => handleUpdateStatus(req.id, "InProgress")}
+                          className="text-[10px] text-(--warning-text) font-bold hover:underline"
+                        >
+                          Start Repair Work
+                        </button>
+                      )}
+                      {req.status === "InProgress" && (
+                        <button
+                          onClick={() => setActiveRequestForResolve(req)}
                           className="text-[10px] text-(--success-text) font-bold hover:underline"
                         >
-                          Approve
+                          Mark Resolved
                         </button>
-                        <button
-                          onClick={() => handleUpdateStatus(req.id, "Rejected")}
-                          className="text-[10px] text-(--danger-text) font-bold hover:underline"
-                        >
-                          Reject
-                        </button>
-                      </>
-                    )}
-                    {req.status === "Approved" && (
-                      <button
-                        onClick={() => setActiveRequestForTech(req)}
-                        className="text-[10px] text-(--accent) font-bold hover:underline"
-                      >
-                        Assign Technician
-                      </button>
-                    )}
-                    {req.status === "Assigned" && (
-                      <button
-                        onClick={() => handleUpdateStatus(req.id, "InProgress")}
-                        className="text-[10px] text-(--warning-text) font-bold hover:underline"
-                      >
-                        Start Repair Work
-                      </button>
-                    )}
-                    {req.status === "InProgress" && (
-                      <button
-                        onClick={() => setActiveRequestForResolve(req)}
-                        className="text-[10px] text-(--success-text) font-bold hover:underline"
-                      >
-                        Mark Resolved
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })
           )}
         </div>
       </div>
@@ -221,7 +240,7 @@ export default function MaintenanceManagement({ user }: MaintenanceManagementPro
           </div>
           <form onSubmit={handleRaiseRequest} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex flex-col space-y-1">
-              <label className="text-[10px] font-semibold text-(--muted)">Select Asset</label>
+              <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Select Asset</label>
               <select
                 required
                 value={selectedAssetId}
@@ -238,7 +257,7 @@ export default function MaintenanceManagement({ user }: MaintenanceManagementPro
             </div>
 
             <div className="flex flex-col space-y-1">
-              <label className="text-[10px] font-semibold text-(--muted)">Priority Level</label>
+              <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Priority Level</label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as any)}
@@ -252,7 +271,7 @@ export default function MaintenanceManagement({ user }: MaintenanceManagementPro
             </div>
 
             <div className="md:col-span-3 flex flex-col space-y-1">
-              <label className="text-[10px] font-semibold text-(--muted)">Problem Description</label>
+              <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Problem Description</label>
               <textarea
                 required
                 value={description}
@@ -285,23 +304,31 @@ export default function MaintenanceManagement({ user }: MaintenanceManagementPro
           <div className="erp-card w-full max-w-sm space-y-4">
             <h3 className="text-sm font-semibold text-(--fg)">Assign Technician</h3>
             <div className="flex flex-col space-y-3">
-              <input
-                type="text"
+              <select
                 required
                 value={techId}
                 onChange={(e) => setTechId(e.target.value)}
                 className="erp-input text-xs"
-                placeholder="Enter Technician / Agent Name..."
-              />
+              >
+                <option value="">Choose Technician...</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.name} ({emp.role})
+                  </option>
+                ))}
+              </select>
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => {
-                    handleUpdateStatus(activeRequestForTech.id, "Assigned", { assignedTechnicianId: 99 }); // simulated ID
-                    setActiveRequestForTech(null);
-                    setTechId("");
+                    if (techId) {
+                      handleUpdateStatus(activeRequestForTech.id, "Assigned", { assignedTechnicianId: techId });
+                      setActiveRequestForTech(null);
+                      setTechId("");
+                    }
                   }}
                   className="erp-btn-primary text-xs"
+                  disabled={!techId}
                 >
                   Confirm Assignment
                 </button>

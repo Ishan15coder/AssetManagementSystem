@@ -61,6 +61,17 @@ export async function POST(request: Request) {
         data: { status: "Allocated" },
       });
 
+      // Notify the employee of the new assignment
+      if (employeeId) {
+        await tx.notification.create({
+          data: {
+            employeeId,
+            type: "Alert",
+            message: `Asset ${asset.name} (${asset.tag}) has been allocated to you.`,
+          },
+        });
+      }
+
       return alloc;
     });
 

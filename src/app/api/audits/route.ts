@@ -44,13 +44,36 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
+    const { departmentId, location } = body;
+    
     const result = auditCycleSchema.safeParse(body);
-
     if (!result.success) {
       return NextResponse.json({ error: result.error.issues[0].message }, { status: 400 });
     }
 
     const { name, startDate, endDate, auditorId } = result.data;
+
+    // Define database query filters based on selected audit scope
+    const assetFilter: any = {
+      status: { in: ["Available", "Allocated", "Reserved", "UnderMaintenance"] },
+    };
+
+    if (location && location.trim().length > 0) {
+      assetFilter.location = { contains: location };
+    }
+
+    if (departmentId) {
+      const deptIdNum = parseInt(departmentId);
+      assetFilter.allocations = {
+        some: {
+          status: "Active",
+          OR: [
+            { departmentId: deptIdNum },
+            { employee: { departmentId: deptIdNum } }
+          ]
+        }
+      };
+    }
 
     const cycle = await db.$transaction(async (tx) => {
       // Create cycle
@@ -64,14 +87,12 @@ export async function POST(request: Request) {
         },
       });
 
-      // Fetch all active/existing assets to compile into the audit cycle's check-off list
+      // Fetch scoped assets matching selection criteria
       const assets = await tx.asset.findMany({
-        where: {
-          status: { in: ["Available", "Allocated", "Reserved", "UnderMaintenance"] },
-        },
+        where: assetFilter,
       });
 
-      // Create audit items
+      // Create audit items checklist
       if (assets.length > 0) {
         await tx.auditItem.createMany({
           data: assets.map((asset) => ({
@@ -89,7 +110,7 @@ export async function POST(request: Request) {
       data: {
         employeeId: user.id,
         action: "CreateAuditCycle",
-        details: `Created audit cycle: ${name} (Auditor ID: ${auditorId})`,
+        details: `Created audit cycle: ${name} (Scope Dept: ${departmentId || "All"}, Scope Location: ${location || "All"})`,
       },
     });
 
@@ -98,3 +119,4 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to create audit cycle" }, { status: 500 });
   }
 }
+

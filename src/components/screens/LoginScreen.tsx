@@ -19,11 +19,14 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const [password, setPassword] = useState("");
   const [name, setName]       = useState("");
   const [isSignup, setIsSignup] = useState(false);
+  const [isForgot, setIsForgot] = useState(false);
   const [error, setError]     = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleDevSwitch = async (demoEmail: string) => {
     setError("");
+    setSuccessMsg("");
     setLoading(true);
     try {
       const res = await fetch("/api/auth/login", {
@@ -44,7 +47,28 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccessMsg("");
     setLoading(true);
+
+    if (isForgot) {
+      try {
+        const res = await fetch("/api/auth/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to reset password");
+        setSuccessMsg(`Reset successful. Temporary password is: ${data.tempPassword}`);
+        setIsForgot(false);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     const url = isSignup ? "/api/auth/signup" : "/api/auth/login";
     const payload = isSignup ? { name, email, password } : { email, password };
     try {
@@ -57,7 +81,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       if (!res.ok) throw new Error(data.error || "Authentication failed");
       if (isSignup) {
         setIsSignup(false);
-        setError("Account created — please sign in.");
+        setSuccessMsg("Account created — please sign in.");
       } else {
         onLoginSuccess(data.user);
       }
@@ -127,10 +151,12 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           </div>
 
           <h2 className="text-xl font-semibold text-(--fg) mb-1">
-            {isSignup ? "Create an account" : "Sign in"}
+            {isForgot ? "Reset password" : isSignup ? "Create an account" : "Sign in"}
           </h2>
           <p className="text-sm text-(--muted) mb-6">
-            {isSignup
+            {isForgot
+              ? "Enter your email to receive a temporary sign-in password."
+              : isSignup
               ? "You'll start with the Employee role by default."
               : "Enter your credentials to access the dashboard."}
           </p>
@@ -138,6 +164,12 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           {error && (
             <div className="mb-4 px-3.5 py-2.5 rounded-(--radius-sm) bg-(--danger-bg) border border-[oklch(from_var(--danger)_l_c_h/0.2)] text-(--danger) text-sm">
               {error}
+            </div>
+          )}
+
+          {successMsg && (
+            <div className="mb-4 px-3.5 py-2.5 rounded-(--radius-sm) bg-(--success-bg) border border-[oklch(from_var(--success)_l_c_h/0.2)] text-(--success) text-sm font-semibold">
+              {successMsg}
             </div>
           )}
 
@@ -168,38 +200,61 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
               />
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-medium text-(--fg)">Password</label>
-                {!isSignup && (
-                  <button type="button" className="text-xs text-(--accent) hover:underline">
-                    Forgot password?
-                  </button>
-                )}
+            {!isForgot && (
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-sm font-medium text-(--fg)">Password</label>
+                  {!isSignup && (
+                    <button type="button" onClick={() => { setIsForgot(true); setError(""); setSuccessMsg(""); }} className="text-xs text-(--accent) hover:underline">
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="erp-input"
+                  placeholder="••••••••"
+                />
               </div>
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="erp-input"
-                placeholder="••••••••"
-              />
-            </div>
+            )}
 
             <button type="submit" disabled={loading} className="erp-btn-primary w-full mt-1.5">
-              {loading ? "Signing in…" : isSignup ? "Create account" : "Sign in"}
+              {loading ? "Processing…" : isForgot ? "Reset password" : isSignup ? "Create account" : "Sign in"}
             </button>
           </form>
 
           <p className="mt-5 text-sm text-center text-(--muted)">
-            {isSignup ? "Already have an account? " : "New here? "}
-            <button
-              onClick={() => { setIsSignup(!isSignup); setError(""); }}
-              className="text-(--accent) hover:underline font-medium"
-            >
-              {isSignup ? "Sign in" : "Create account"}
-            </button>
+            {isForgot ? (
+              <button
+                onClick={() => { setIsForgot(false); setError(""); setSuccessMsg(""); }}
+                className="text-(--accent) hover:underline font-medium"
+              >
+                Back to sign in
+              </button>
+            ) : isSignup ? (
+              <>
+                Already have an account?{" "}
+                <button
+                  onClick={() => { setIsSignup(false); setIsForgot(false); setError(""); setSuccessMsg(""); }}
+                  className="text-(--accent) hover:underline font-medium"
+                >
+                  Sign in
+                </button>
+              </>
+            ) : (
+              <>
+                New here?{" "}
+                <button
+                  onClick={() => { setIsSignup(true); setIsForgot(false); setError(""); setSuccessMsg(""); }}
+                  className="text-(--accent) hover:underline font-medium"
+                >
+                  Create account
+                </button>
+              </>
+            )}
           </p>
 
           {/* Dev console */}

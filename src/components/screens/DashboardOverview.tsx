@@ -8,7 +8,16 @@ interface DashboardOverviewProps {
 }
 
 export default function DashboardOverview({ user, setActiveScreen }: DashboardOverviewProps) {
-  const [stats, setStats]           = useState({ available: 0, allocated: 0, maintenance: 0, bookings: 0, overdue: 0 });
+  const [stats, setStats]           = useState({ 
+    available: 0, 
+    allocated: 0, 
+    maintenance: 0, 
+    bookings: 0, 
+    overdue: 0,
+    maintenanceToday: 0,
+    pendingTransfers: 0,
+    upcomingReturns: 0
+  });
   const [overdueItems, setOverdueItems] = useState<any[]>([]);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
   const [loading, setLoading]       = useState(true);
@@ -43,6 +52,9 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
           maintenance: count("UnderMaintenance"),
           bookings:    (rr.resourceBookings ?? []).reduce((a: number, b: any) => a + Number(b.count ?? 0), 0),
           overdue:     overdue.length,
+          maintenanceToday: rr.maintenanceToday ?? 0,
+          pendingTransfers: rr.pendingTransfers ?? 0,
+          upcomingReturns: rr.upcomingReturns ?? 0,
         });
         setOverdueItems(overdue);
         setRecentLogs((rl.logs ?? []).slice(0, 8));
@@ -70,11 +82,13 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
   const isManager = user.role === "Admin" || user.role === "AssetManager";
 
   const statItems = [
-    { label: "Available",  value: stats.available,   color: "var(--success)" },
-    { label: "Allocated",  value: stats.allocated,   color: "var(--fg)" },
-    { label: "In repair",  value: stats.maintenance, color: "var(--warning)" },
-    { label: "Bookings",   value: stats.bookings,    color: "var(--fg)" },
-    { label: "Overdue",    value: stats.overdue,     color: stats.overdue > 0 ? "var(--danger)" : "var(--fg)" },
+    { label: "Available",   value: stats.available,        color: "var(--success)" },
+    { label: "Allocated",   value: stats.allocated,        color: "var(--fg)" },
+    { label: "Active Bookings", value: stats.bookings,     color: "var(--fg)" },
+    { label: "Maint. Today", value: stats.maintenanceToday, color: "var(--warning)" },
+    { label: "Pending Transfers", value: stats.pendingTransfers, color: "var(--warning)" },
+    { label: "Upcoming Returns", value: stats.upcomingReturns, color: "var(--success)" },
+    { label: "Overdue",     value: stats.overdue,          color: stats.overdue > 0 ? "var(--danger)" : "var(--fg)" },
   ];
 
   return (
@@ -94,8 +108,8 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
 
       {/* Stats strip */}
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px" style={{ background: "var(--border)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
-          {[...Array(5)].map((_, i) => (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-px" style={{ background: "var(--border)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+          {[...Array(7)].map((_, i) => (
             <div key={i} className="px-5 py-5 animate-pulse" style={{ background: "var(--surface)" }}>
               <div className="h-3 w-16 rounded-(--radius-sm) mb-3" style={{ background: "var(--surface-2)" }} />
               <div className="h-8 w-10 rounded-(--radius-sm)" style={{ background: "var(--surface-2)" }} />
@@ -104,7 +118,7 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
         </div>
       ) : (
         <div
-          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px"
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-px"
           style={{ background: "var(--border)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}
         >
           {statItems.map((s, i) => (
@@ -118,10 +132,10 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
                 transition: `opacity 300ms ease ${80 + i * 60}ms, transform 300ms ease ${80 + i * 60}ms`,
               }}
             >
-              <p className="text-xs font-medium" style={{ color: "var(--muted)" }}>{s.label}</p>
+              <p className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">{s.label}</p>
               <p
-                className="mt-2 font-semibold tabular-nums"
-                style={{ fontSize: "1.875rem", lineHeight: 1, color: s.color }}
+                className="mt-2 font-semibold tabular-nums text-2xl"
+                style={{ lineHeight: 1, color: s.color }}
               >
                 {s.value}
               </p>

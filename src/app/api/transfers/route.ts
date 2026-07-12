@@ -88,9 +88,19 @@ export async function POST(request: Request) {
       }
 
       if (action === "reject") {
-        const rejected = await db.transferRequest.update({
-          where: { id: transferReq.id },
-          data: { status: "Rejected", approvedById: user.id, approvedDate: new Date() },
+        const rejected = await db.$transaction(async (tx) => {
+          const u = await tx.transferRequest.update({
+            where: { id: transferReq.id },
+            data: { status: "Rejected", approvedById: user.id, approvedDate: new Date() },
+          });
+          await tx.notification.create({
+            data: {
+              employeeId: transferReq.toEmployeeId,
+              type: "Warning",
+              message: `Transfer request for Asset ID: ${transferReq.assetId} was rejected.`,
+            },
+          });
+          return u;
         });
         return NextResponse.json({ message: "Transfer request rejected", transfer: rejected });
       }
@@ -129,6 +139,23 @@ export async function POST(request: Request) {
             status: "Approved",
             approvedById: user.id,
             approvedDate: new Date(),
+          },
+        });
+
+        // Notify both personnel involved in the transfer
+        await tx.notification.create({
+          data: {
+            employeeId: transferReq.toEmployeeId,
+            type: "Alert",
+            message: `Transfer approved. Asset ID: ${transferReq.assetId} is now allocated to you.`,
+          },
+        });
+
+        await tx.notification.create({
+          data: {
+            employeeId: transferReq.fromEmployeeId,
+            type: "Info",
+            message: `Your Asset ID: ${transferReq.assetId} has been transferred.`,
           },
         });
 

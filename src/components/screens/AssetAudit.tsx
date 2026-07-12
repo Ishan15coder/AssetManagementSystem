@@ -9,6 +9,7 @@ interface AssetAuditProps {
 export default function AssetAudit({ user }: AssetAuditProps) {
   const [cycles, setCycles] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [selectedCycleId, setSelectedCycleId] = useState("");
 
   // Create Cycle Form
@@ -16,6 +17,8 @@ export default function AssetAudit({ user }: AssetAuditProps) {
   const [startDateStr, setStartDateStr] = useState("");
   const [endDateStr, setEndDateStr] = useState("");
   const [auditorId, setAuditorId] = useState("");
+  const [scopeDeptId, setScopeDeptId] = useState("");
+  const [scopeLocation, setScopeLocation] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   const [error, setError] = useState("");
@@ -24,15 +27,19 @@ export default function AssetAudit({ user }: AssetAuditProps) {
 
   const loadData = async () => {
     try {
-      const [resCycles, resEmployees] = await Promise.all([
+      const [resCycles, resEmployees, resDepts] = await Promise.all([
         fetch("/api/audits"),
         fetch("/api/employees"),
+        fetch("/api/departments"),
       ]);
       const dataCycles = await resCycles.json();
       const dataEmployees = await resEmployees.json();
+      const dataDepts = await resDepts.json();
 
       setCycles(dataCycles.cycles || []);
       setEmployees(dataEmployees.employees || []);
+      setDepartments(dataDepts.departments || []);
+      
       if (dataCycles.cycles?.length > 0 && !selectedCycleId) {
         setSelectedCycleId(String(dataCycles.cycles[0].id));
       }
@@ -60,6 +67,8 @@ export default function AssetAudit({ user }: AssetAuditProps) {
           startDate: new Date(startDateStr).toISOString(),
           endDate: new Date(endDateStr).toISOString(),
           auditorId: parseInt(auditorId),
+          departmentId: scopeDeptId ? parseInt(scopeDeptId) : null,
+          location: scopeLocation || null,
         }),
       });
 
@@ -71,6 +80,8 @@ export default function AssetAudit({ user }: AssetAuditProps) {
       setStartDateStr("");
       setEndDateStr("");
       setAuditorId("");
+      setScopeDeptId("");
+      setScopeLocation("");
       setShowCreateForm(false);
       loadData();
     } catch (err: any) {
@@ -158,55 +169,88 @@ export default function AssetAudit({ user }: AssetAuditProps) {
               Cancel
             </button>
           </div>
-          <form onSubmit={handleCreateCycle} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="flex flex-col space-y-1">
-              <label className="text-[10px] font-semibold text-(--muted)">Cycle Name</label>
-              <input
-                type="text"
-                required
-                value={cycleName}
-                onChange={(e) => setCycleName(e.target.value)}
-                className="erp-input"
-                placeholder="e.g. Q3 IT Hardware Audit"
-              />
+          <form onSubmit={handleCreateCycle} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Cycle Name</label>
+                <input
+                  type="text"
+                  required
+                  value={cycleName}
+                  onChange={(e) => setCycleName(e.target.value)}
+                  className="erp-input"
+                  placeholder="e.g. Q3 IT Hardware Audit"
+                />
+              </div>
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Start Date</label>
+                <input
+                  type="date"
+                  required
+                  value={startDateStr}
+                  onChange={(e) => setStartDateStr(e.target.value)}
+                  className="erp-input text-xs"
+                />
+              </div>
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">End Date</label>
+                <input
+                  type="date"
+                  required
+                  value={endDateStr}
+                  onChange={(e) => setEndDateStr(e.target.value)}
+                  className="erp-input text-xs"
+                />
+              </div>
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Assigned Auditor</label>
+                <select
+                  required
+                  value={auditorId}
+                  onChange={(e) => setAuditorId(e.target.value)}
+                  className="erp-input"
+                >
+                  <option value="">Choose Auditor</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} ({emp.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
-            <div className="flex flex-col space-y-1">
-              <label className="text-[10px] font-semibold text-(--muted)">Start Date</label>
-              <input
-                type="date"
-                required
-                value={startDateStr}
-                onChange={(e) => setStartDateStr(e.target.value)}
-                className="erp-input text-xs"
-              />
+
+            {/* Scope selectors */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-(--border) pt-4">
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Scope Scope: Department (Optional)</label>
+                <select
+                  value={scopeDeptId}
+                  onChange={(e) => setScopeDeptId(e.target.value)}
+                  className="erp-input text-xs"
+                >
+                  <option value="">All Departments</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Scope Scope: Location (Optional)</label>
+                <input
+                  type="text"
+                  value={scopeLocation}
+                  onChange={(e) => setScopeLocation(e.target.value)}
+                  className="erp-input text-xs"
+                  placeholder="e.g. HQ - Room 402"
+                />
+              </div>
             </div>
-            <div className="flex flex-col space-y-1">
-              <label className="text-[10px] font-semibold text-(--muted)">End Date</label>
-              <input
-                type="date"
-                required
-                value={endDateStr}
-                onChange={(e) => setEndDateStr(e.target.value)}
-                className="erp-input text-xs"
-              />
-            </div>
-            <div className="flex flex-col space-y-1">
-              <label className="text-[10px] font-semibold text-(--muted)">Assigned Auditor</label>
-              <select
-                required
-                value={auditorId}
-                onChange={(e) => setAuditorId(e.target.value)}
-                className="erp-input"
-              >
-                <option value="">Choose Auditor</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name} ({emp.role})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="md:col-span-4 pt-2">
+
+            <div className="pt-2">
               <button type="submit" disabled={loading} className="erp-btn-primary">
                 Launch Audit Cycle
               </button>

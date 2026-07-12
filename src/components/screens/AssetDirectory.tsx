@@ -20,12 +20,19 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
   const [condition, setCondition] = useState<"New" | "Good" | "Fair" | "Poor">("Good");
   const [location, setLocation] = useState("");
   const [isBookable, setIsBookable] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [documentUrl, setDocumentUrl] = useState("");
   const [showRegForm, setShowRegForm] = useState(false);
 
   // Search/Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+
+  // Upload/QR Scan Simulation
+  const [uploading, setUploading] = useState(false);
+  const [showScanSim, setShowScanSim] = useState(false);
+  const [scanSimAssetId, setScanSimAssetId] = useState("");
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -47,14 +54,9 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
 
   const loadCategories = async () => {
     try {
-      const resDepts = await fetch("/api/departments");
-      // Mapped from department data or fallback to defaults
-      setCategories([
-        { id: 1, name: "Electronics" },
-        { id: 2, name: "Furniture" },
-        { id: 3, name: "Vehicles" },
-        { id: 4, name: "Office Space" },
-      ]);
+      const res = await fetch("/api/categories");
+      const data = await res.json();
+      setCategories(data.categories || []);
     } catch (err) {
       console.error(err);
     }
@@ -64,6 +66,39 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
     loadAssets();
     loadCategories();
   }, [searchQuery, filterCategory, filterStatus]);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "photo" | "doc") => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setError("");
+    setSuccess("");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch("/api/assets/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "File upload failed");
+
+      if (type === "photo") {
+        setPhotoUrl(data.fileUrl);
+        setSuccess("Asset photo uploaded successfully");
+      } else {
+        setDocumentUrl(data.fileUrl);
+        setSuccess("Asset document uploaded successfully");
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,6 +119,8 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
           condition,
           location,
           isBookable,
+          photoUrl: photoUrl || null,
+          documentUrl: documentUrl || null,
         }),
       });
 
@@ -98,6 +135,8 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
       setCondition("Good");
       setLocation("");
       setIsBookable(false);
+      setPhotoUrl("");
+      setDocumentUrl("");
       setShowRegForm(false);
       loadAssets();
     } catch (err: any) {
@@ -116,6 +155,17 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
       setAssetHistory(data.history || []);
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleScanSimulateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!scanSimAssetId) return;
+    const targetAsset = assets.find(a => String(a.id) === scanSimAssetId);
+    if (targetAsset) {
+      setShowScanSim(false);
+      viewHistory(targetAsset);
+      setScanSimAssetId("");
     }
   };
 
@@ -147,11 +197,16 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
           <h1 className="text-xl font-bold tracking-tight mb-1">Asset Directory</h1>
           <p className="text-xs text-(--muted)">Register, search, and audit corporate physical inventory and active lifecycles.</p>
         </div>
-        {canRegister && !showRegForm && (
-          <button onClick={() => setShowRegForm(true)} className="erp-btn-primary text-xs">
-            Register Asset
+        <div className="flex gap-2">
+          <button onClick={() => setShowScanSim(true)} className="erp-btn-secondary text-xs">
+            Scan QR Simulator
           </button>
-        )}
+          {canRegister && !showRegForm && (
+            <button onClick={() => setShowRegForm(true)} className="erp-btn-primary text-xs">
+              Register Asset
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -176,7 +231,7 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
           </div>
           <form onSubmit={handleRegister} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex flex-col space-y-1">
-              <label className="text-[10px] font-semibold text-(--muted)">Asset Name</label>
+              <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Asset Name</label>
               <input
                 type="text"
                 required
@@ -188,7 +243,7 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
             </div>
 
             <div className="flex flex-col space-y-1">
-              <label className="text-[10px] font-semibold text-(--muted)">Serial Number</label>
+              <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Serial Number</label>
               <input
                 type="text"
                 required
@@ -200,7 +255,7 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
             </div>
 
             <div className="flex flex-col space-y-1">
-              <label className="text-[10px] font-semibold text-(--muted)">Category</label>
+              <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Category</label>
               <select
                 required
                 value={categoryId}
@@ -217,7 +272,7 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
             </div>
 
             <div className="flex flex-col space-y-1">
-              <label className="text-[10px] font-semibold text-(--muted)">Acquisition Cost (USD)</label>
+              <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Acquisition Cost (USD)</label>
               <input
                 type="number"
                 step="0.01"
@@ -230,7 +285,7 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
             </div>
 
             <div className="flex flex-col space-y-1">
-              <label className="text-[10px] font-semibold text-(--muted)">Initial Condition</label>
+              <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Initial Condition</label>
               <select
                 value={condition}
                 onChange={(e) => setCondition(e.target.value as any)}
@@ -244,7 +299,7 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
             </div>
 
             <div className="flex flex-col space-y-1">
-              <label className="text-[10px] font-semibold text-(--muted)">Primary Location</label>
+              <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Primary Location</label>
               <input
                 type="text"
                 required
@@ -253,6 +308,29 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
                 className="erp-input"
                 placeholder="e.g. IT Storage Locker B"
               />
+            </div>
+
+            {/* Photo & PDF Upload fields */}
+            <div className="flex flex-col space-y-1">
+              <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Asset Photo upload</label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => handleFileUpload(e, "photo")}
+                className="erp-input text-xs"
+              />
+              {photoUrl && <span className="text-[10px] text-emerald-400 font-semibold">✓ Photo attached</span>}
+            </div>
+
+            <div className="flex flex-col space-y-1">
+              <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Asset Document (PDF/Doc) upload</label>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.txt"
+                onChange={(e) => handleFileUpload(e, "doc")}
+                className="erp-input text-xs"
+              />
+              {documentUrl && <span className="text-[10px] text-emerald-400 font-semibold">✓ Document attached</span>}
             </div>
 
             <div className="md:col-span-3 flex items-center space-x-2 pt-2">
@@ -269,7 +347,7 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
             </div>
 
             <div className="md:col-span-3 pt-2">
-              <button type="submit" disabled={loading} className="erp-btn-primary">
+              <button type="submit" disabled={loading || uploading} className="erp-btn-primary">
                 Confirm Registration
               </button>
             </div>
@@ -366,44 +444,130 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
 
       {/* Slide-out History Timeline Drawer */}
       {selectedAsset && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-400 flex justify-end">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[400] flex justify-end">
           <div className="w-full max-w-lg bg-(--surface) border-l border-(--border) p-6 overflow-y-auto flex flex-col h-full text-(--foreground)">
             <div className="flex justify-between items-center border-b border-(--border) pb-4 mb-4">
               <div>
-                <h3 className="text-sm font-semibold text-(--fg)">Asset Lifecycle Timeline</h3>
+                <h3 className="text-sm font-semibold text-(--fg)">Asset Details & Lifecycle</h3>
                 <p className="text-xs text-(--muted)">History logs for {selectedAsset.name} ({selectedAsset.tag})</p>
               </div>
               <button
                 onClick={() => setSelectedAsset(null)}
-                className="text-xs text-(--muted) hover:text-(--foreground)"
+                className="text-xs text-(--muted) hover:text-(--foreground) font-semibold"
               >
                 Close Drawer
               </button>
             </div>
 
-            {/* Timeline List */}
-            <div className="relative border-l border-(--border) pl-4 ml-2 space-y-6 flex-1">
-              {assetHistory.length === 0 ? (
-                <p className="text-xs text-(--muted) py-4">No historical records found for this asset.</p>
-              ) : (
-                assetHistory.map((item, index) => (
-                  <div key={index} className="relative">
-                    {/* Circle marker on timeline */}
-                    <div className="absolute left-[-21px] top-1 h-3.5 w-3.5 bg-(--background) border border-(--border) rounded-full flex items-center justify-center">
-                      <div className="h-1.5 w-1.5 bg-(--accent) rounded-full"></div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-(--muted) tech-code">
-                        {new Date(item.date).toLocaleDateString()} at {new Date(item.date).toLocaleTimeString()}
-                      </div>
-                      <div className="text-xs font-semibold mt-1">{item.details}</div>
-                      {item.notes && <div className="text-xs text-(--muted) mt-1">{item.notes}</div>}
-                      <div className="mt-1">{getStatusBadge(item.status)}</div>
-                    </div>
-                  </div>
-                ))
+            {/* Display Photos / Documents if attached */}
+            <div className="mb-6 space-y-4">
+              <div className="flex items-center gap-4 bg-(--background) p-3 border border-(--border) rounded-(--radius-sm)">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${selectedAsset.tag}`}
+                  alt="Asset QR Code"
+                  className="h-20 w-20 border border-(--border) bg-white p-1 rounded-(--radius-sm) shrink-0"
+                />
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-(--muted) tracking-wider">Asset tag QR Code</span>
+                  <p className="text-xs font-semibold mt-0.5">{selectedAsset.tag}</p>
+                  <p className="text-[10px] text-(--muted)">Scan to search or process audits locally.</p>
+                </div>
+              </div>
+
+              {selectedAsset.photoUrl && (
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-(--muted) tracking-wider">Asset Photo</span>
+                  <img
+                    src={selectedAsset.photoUrl}
+                    alt={selectedAsset.name}
+                    className="h-36 w-full object-cover rounded-(--radius-sm) border border-(--border) mt-1.5"
+                  />
+                </div>
+              )}
+
+              {selectedAsset.documentUrl && (
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-(--muted) tracking-wider">Documentation</span>
+                  <a
+                    href={selectedAsset.documentUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1.5 flex items-center gap-2 text-xs font-semibold text-(--accent) hover:underline"
+                  >
+                    View Registered PDF / Attachment
+                  </a>
+                </div>
               )}
             </div>
+
+            <div className="border-t border-(--border) pt-4">
+              <h4 className="text-xs font-semibold text-(--muted) mb-3">Lifecycle Event Timeline</h4>
+              <div className="relative border-l border-(--border) pl-4 ml-2 space-y-6">
+                {assetHistory.length === 0 ? (
+                  <p className="text-xs text-(--muted) py-4">No historical records found for this asset.</p>
+                ) : (
+                  assetHistory.map((item, index) => (
+                    <div key={index} className="relative">
+                      {/* Circle marker on timeline */}
+                      <div className="absolute left-[-21px] top-1 h-3.5 w-3.5 bg-(--background) border border-(--border) rounded-full flex items-center justify-center">
+                        <div className="h-1.5 w-1.5 bg-(--accent) rounded-full"></div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-(--muted) tech-code">
+                          {new Date(item.date).toLocaleDateString()} at {new Date(item.date).toLocaleTimeString()}
+                        </div>
+                        <div className="text-xs font-semibold mt-1">{item.details}</div>
+                        {item.notes && <div className="text-xs text-(--muted) mt-1">{item.notes}</div>}
+                        <div className="mt-1">{getStatusBadge(item.status)}</div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Scanner Simulation Pop-up Modal */}
+      {showScanSim && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[500] flex items-center justify-center p-4">
+          <div className="erp-card w-full max-w-sm space-y-4">
+            <div className="flex justify-between items-center border-b border-(--border) pb-2">
+              <h3 className="text-sm font-semibold text-(--fg)">QR Code Scanner Simulator</h3>
+              <button onClick={() => setShowScanSim(false)} className="text-xs text-(--muted) hover:text-(--foreground)">
+                Cancel
+              </button>
+            </div>
+            <form onSubmit={handleScanSimulateSubmit} className="space-y-4">
+              <p className="text-xs text-(--muted) leading-relaxed">
+                Scan simulation: Choose an asset tag from the dropdown below to simulate scanning the physical asset's QR sticker.
+              </p>
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Select Scanned Asset Tag</label>
+                <select
+                  required
+                  value={scanSimAssetId}
+                  onChange={(e) => setScanSimAssetId(e.target.value)}
+                  className="erp-input text-xs"
+                >
+                  <option value="">Select Asset...</option>
+                  {assets.map((asset) => (
+                    <option key={asset.id} value={asset.id}>
+                      {asset.tag} - {asset.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <button type="submit" className="erp-btn-primary text-xs" disabled={!scanSimAssetId}>
+                  Simulate QR Scan
+                </button>
+                <button type="button" onClick={() => setShowScanSim(false)} className="erp-btn-secondary text-xs">
+                  Cancel
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
