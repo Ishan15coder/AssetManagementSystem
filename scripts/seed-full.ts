@@ -123,7 +123,7 @@ async function main() {
   }
 
   console.log("Seeding Categories...");
-  const categories = {};
+  const categories: Record<string, any> = {};
   const catNames = [...new Set(assetModels.map(a => a.category))];
   for (const name of catNames) {
     categories[name] = await prisma.assetCategory.create({ data: { name } });

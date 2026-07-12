@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { UserPlus, UserCog, UserX, Check, Search, Filter } from "lucide-react";
 import { CustomSelect } from "@/components/ui/CustomSelect";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
+import { exportToCSV } from "@/lib/export";
 
 interface OrgSetupProps {
   user: any;
@@ -280,6 +281,30 @@ export default function OrgSetup({ user }: OrgSetupProps) {
     AssetManager: "var(--accent)",
     DeptHead: "var(--warning-text)",
     Employee: "var(--muted)",
+    Disposed: "var(--danger-text)",
+  };
+
+  const handleExportDepartments = () => {
+    const formatted = departments.map(d => ({
+      ID: d.id,
+      Name: d.name,
+      Head: d.head?.name || "Unassigned",
+      Parent_Scope: d.parent?.name || "None",
+      Status: d.status || "Active"
+    }));
+    exportToCSV(`departments_export.csv`, formatted);
+  };
+
+  const handleExportEmployees = () => {
+    const formatted = employees.map(e => ({
+      ID: e.id,
+      Name: e.name,
+      Email: e.email,
+      Role: e.role,
+      Department: e.department?.name || "Unassigned",
+      Status: e.status || "Active"
+    }));
+    exportToCSV(`employees_export.csv`, formatted);
   };
 
   return (
@@ -387,7 +412,10 @@ export default function OrgSetup({ user }: OrgSetupProps) {
       {activeTab === "departments" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
-            <h2 className="text-sm font-semibold text-(--fg)">Registered departments</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-sm font-semibold text-(--fg)">Registered departments</h2>
+              <button onClick={handleExportDepartments} className="erp-btn-secondary text-xs">Download CSV</button>
+            </div>
             <div className="overflow-x-auto border border-(--border) bg-(--surface) rounded-md overflow-hidden">
               <table className="erp-table min-w-[650px] w-full">
                 <thead>
@@ -610,7 +638,10 @@ export default function OrgSetup({ user }: OrgSetupProps) {
       {/* Tab C: Employees */}
       {activeTab === "employees" && (
         <div className="space-y-4">
-          <h2 className="text-sm font-semibold text-(--fg)">Employee directory</h2>
+          <div className="flex justify-between items-center">
+            <h2 className="text-sm font-semibold text-(--fg)">Employee directory</h2>
+            <button onClick={handleExportEmployees} className="erp-btn-secondary text-xs">Download CSV</button>
+          </div>
           <div className="overflow-x-auto border border-(--border) bg-(--surface) rounded-md overflow-hidden">
             <table className="erp-table min-w-[750px] w-full">
               <thead>

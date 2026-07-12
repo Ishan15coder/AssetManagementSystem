@@ -585,6 +585,14 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
         <table className="erp-table min-w-[750px] w-full">
           <thead>
             <tr>
+              <th className="w-10 text-center">
+                <input
+                  type="checkbox"
+                  className="accent-white"
+                  checked={assets.length > 0 && selectedIds.length === assets.length}
+                  onChange={toggleSelectAll}
+                />
+              </th>
               <th>Asset Tag</th>
               <th>Name</th>
               <th>Category</th>
@@ -631,6 +639,16 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
             )}
           </tbody>
         </table>
+      </div>
+
+      <div className="mt-4">
+        <Pagination 
+          currentPage={meta.page} 
+          totalPages={meta.totalPages} 
+          totalItems={meta.total}
+          itemsPerPage={meta.limit}
+          onPageChange={loadAssets} 
+        />
       </div>
 
       {/* Slide-out History Timeline Drawer */}
