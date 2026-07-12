@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { UserPlus, UserCog, UserX, Check, Search, Filter } from "lucide-react";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 
 interface OrgSetupProps {
   user: any;
@@ -681,44 +683,40 @@ export default function OrgSetup({ user }: OrgSetupProps) {
 
               <div className="flex flex-col space-y-1">
                 <label className="text-xs font-semibold text-(--muted)">Department Assignment</label>
-                <select
+                <CustomSelect
                   value={editEmpDeptId}
-                  onChange={(e) => setEditEmpDeptId(e.target.value)}
-                  className="erp-input text-xs"
-                >
-                  <option value="">Unassigned</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setEditEmpDeptId}
+                  options={[
+                    { value: "", label: "Unassigned" },
+                    ...departments.map(d => ({ value: String(d.id), label: d.name }))
+                  ]}
+                />
               </div>
 
               <div className="flex flex-col space-y-1">
                 <label className="text-xs font-semibold text-(--muted)">ERP Role Role-Based Workflows</label>
-                <select
+                <CustomSelect
                   value={editEmpRole}
-                  onChange={(e) => setEditEmpRole(e.target.value)}
-                  className="erp-input text-xs"
-                >
-                  <option value="Employee">Employee</option>
-                  <option value="DeptHead">Dept Head</option>
-                  <option value="AssetManager">Asset Manager</option>
-                  <option value="Admin">Admin</option>
-                </select>
+                  onChange={setEditEmpRole}
+                  options={[
+                    { value: "Employee", label: "Employee" },
+                    { value: "DeptHead", label: "Dept Head" },
+                    { value: "AssetManager", label: "Asset Manager" },
+                    { value: "Admin", label: "Admin" },
+                  ]}
+                />
               </div>
 
               <div className="flex flex-col space-y-1">
                 <label className="text-xs font-semibold text-(--muted)">Directory Status</label>
-                <select
+                <CustomSelect
                   value={editEmpStatus}
-                  onChange={(e) => setEditEmpStatus(e.target.value)}
-                  className="erp-input text-xs"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
+                  onChange={setEditEmpStatus}
+                  options={[
+                    { value: "Active", label: "Active" },
+                    { value: "Inactive", label: "Inactive" },
+                  ]}
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-2">

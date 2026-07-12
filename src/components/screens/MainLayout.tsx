@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { ToastContainer } from "@/components/ui/ToastContainer";
+import { CommandPalette } from "@/components/ui/CommandPalette";
 
 interface MainLayoutProps {
   user: any;
@@ -14,11 +16,11 @@ const menuItems = [
   { id: "dashboard",   label: "Dashboard"               },
   { id: "org-setup",   label: "Organization",  adminOnly: true },
   { id: "assets",      label: "Asset directory"         },
-  { id: "allocations", label: "Allocations"             },
+  { id: "allocations", label: "Allocations",   notForEmployee: true },
   { id: "bookings",    label: "Resource booking"        },
   { id: "maintenance", label: "Maintenance"             },
-  { id: "audits",      label: "Audits"                  },
-  { id: "reports",     label: "Reports",       managerOnly: true },
+  { id: "audits",      label: "Audits",        notForEmployee: true },
+  { id: "reports",     label: "Reports",       managerOnly: true }, 
   { id: "logs",        label: "Activity logs", managerOnly: true },
 ];
 
@@ -88,10 +90,10 @@ export default function MainLayout({
     } catch {}
   };
 
-  const isManager = user.role === "Admin" || user.role === "AssetManager";
-  const filtered = menuItems.filter(m => {
-    if (m.adminOnly && user.role !== "Admin") return false;
-    if (m.managerOnly && !isManager) return false;
+  const filtered = menuItems.filter((item) => {
+    if (item.adminOnly && user.role !== "Admin") return false;
+    if (item.managerOnly && user.role !== "Admin" && user.role !== "AssetManager") return false;
+    if (item.notForEmployee && user.role === "Employee") return false;
     return true;
   });
 
@@ -213,6 +215,8 @@ export default function MainLayout({
 
   return (
     <div className="h-screen overflow-hidden flex" style={{ background: "var(--bg)" }}>
+      <ToastContainer />
+      <CommandPalette setActiveScreen={setActiveScreen} userRole={user.role} />
       {/* Mobile overlay */}
       {mobileOpen && (
         <div

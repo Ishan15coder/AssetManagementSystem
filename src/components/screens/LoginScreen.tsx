@@ -7,11 +7,11 @@ interface LoginScreenProps {
 }
 
 const demoUsers = [
-  { name: "Sarah Jenkins",   role: "Admin",         email: "admin@assetflow.com"   },
-  { name: "Marcus Vance",    role: "Asset manager", email: "manager@assetflow.com" },
-  { name: "Elena Rostova",   role: "IT dept head",  email: "elena.it@assetflow.com"},
-  { name: "David Kim",       role: "IT employee",   email: "david@assetflow.com"   },
-  { name: "Priya Patel",     role: "HR employee",   email: "priya@assetflow.com"   },
+  { name: "Amit Admin",      role: "Admin",         email: "admin@assetflow.com"   },
+  { name: "Vivaan Patel",    role: "Asset manager", email: "manager@assetflow.com" },
+  { name: "Aditya Singh",    role: "IT dept head",  email: "elena.it@assetflow.com"},
+  { name: "Aadhya Joshi",    role: "IT employee",   email: "david@assetflow.com"   },
+  { name: "Vihaan Gupta",    role: "HR employee",   email: "priya@assetflow.com"   },
 ];
 
 export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {

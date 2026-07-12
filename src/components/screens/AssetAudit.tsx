@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { exportToCSV } from "@/lib/export";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 
 interface AssetAuditProps {
   user: any;
@@ -134,6 +136,18 @@ export default function AssetAudit({ user }: AssetAuditProps) {
   const isAssignedAuditor = activeCycle ? activeCycle.auditorId === user.id : false;
   const canAudit = isAssignedAuditor || canManage;
 
+  const handleExportCSV = () => {
+    if (!activeCycle) return;
+    const formatted = activeCycle.items.map((i: any) => ({
+      Asset_Tag: i.asset.tag,
+      Asset_Name: i.asset.name,
+      Found: i.found ? "Yes" : "No",
+      Status: i.status,
+      Notes: i.notes || ""
+    }));
+    exportToCSV(`audit_log_${activeCycle.name.replace(/\s+/g, '_')}.csv`, formatted);
+  };
+
   return (
     <div className="space-y-6 animate-slide-up">
       {/* Header */}
@@ -142,11 +156,18 @@ export default function AssetAudit({ user }: AssetAuditProps) {
           <h1 className="text-3xl font-extrabold tracking-tight text-(--fg) mb-1">Asset Audits</h1>
           <p className="text-base text-(--muted)">Initiate audit verification cycles, check off asset states, and lock discrepancy registers.</p>
         </div>
-        {canManage && !showCreateForm && (
-          <button onClick={() => setShowCreateForm(true)} className="erp-btn-primary text-xs">
-            New Audit Cycle
-          </button>
-        )}
+        <div className="flex gap-2">
+          {activeCycle && (
+            <button onClick={handleExportCSV} className="erp-btn-secondary text-xs">
+              Export Audit Log (CSV)
+            </button>
+          )}
+          {canManage && !showCreateForm && (
+            <button onClick={() => setShowCreateForm(true)} className="erp-btn-primary text-xs">
+              New Audit Cycle
+            </button>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -204,19 +225,17 @@ export default function AssetAudit({ user }: AssetAuditProps) {
               </div>
               <div className="flex flex-col space-y-1">
                 <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Assigned Auditor</label>
-                <select
-                  required
+                <CustomSelect
                   value={auditorId}
-                  onChange={(e) => setAuditorId(e.target.value)}
-                  className="erp-input"
-                >
-                  <option value="">Choose Auditor</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.name} ({emp.role})
-                    </option>
-                  ))}
-                </select>
+                  onChange={setAuditorId}
+                  options={[
+                    { value: "", label: "Choose Auditor" },
+                    ...employees.map((emp) => ({
+                      value: String(emp.id),
+                      label: `${emp.name} (${emp.role})`,
+                    })),
+                  ]}
+                />
               </div>
             </div>
 
@@ -224,18 +243,17 @@ export default function AssetAudit({ user }: AssetAuditProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-(--border) pt-4">
               <div className="flex flex-col space-y-1">
                 <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Scope Scope: Department (Optional)</label>
-                <select
+                <CustomSelect
                   value={scopeDeptId}
-                  onChange={(e) => setScopeDeptId(e.target.value)}
-                  className="erp-input text-xs"
-                >
-                  <option value="">All Departments</option>
-                  {departments.map((dept) => (
-                    <option key={dept.id} value={dept.id}>
-                      {dept.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setScopeDeptId}
+                  options={[
+                    { value: "", label: "All Departments" },
+                    ...departments.map((dept) => ({
+                      value: String(dept.id),
+                      label: dept.name,
+                    })),
+                  ]}
+                />
               </div>
 
               <div className="flex flex-col space-y-1">
@@ -262,18 +280,19 @@ export default function AssetAudit({ user }: AssetAuditProps) {
       {/* Select active audit selector */}
       <div className="erp-card bg-(--surface) p-4 flex flex-col md:flex-row items-center gap-3">
         <span className="text-xs font-semibold text-(--muted)">Active Cycle:</span>
-        <select
-          value={selectedCycleId}
-          onChange={(e) => setSelectedCycleId(e.target.value)}
-          className="erp-input flex-1 md:max-w-xs"
-        >
-          <option value="">Select Audit Cycle</option>
-          {cycles.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name} ({c.status})
-            </option>
-          ))}
-        </select>
+        <div className="flex-1 md:max-w-xs">
+          <CustomSelect
+            value={selectedCycleId}
+            onChange={setSelectedCycleId}
+            options={[
+              { value: "", label: "Select Audit Cycle" },
+              ...cycles.map((c) => ({
+                value: String(c.id),
+                label: `${c.name} (${c.status})`,
+              })),
+            ]}
+          />
+        </div>
         {activeCycle && (
           <span className="text-xs text-(--muted)">
             Auditor: <span className="text-(--foreground) font-semibold">{activeCycle.auditor.name}</span> | Scope: <span className="text-(--foreground) font-semibold">{activeCycle.items?.length || 0} assets</span>

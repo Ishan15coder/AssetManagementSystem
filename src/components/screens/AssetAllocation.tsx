@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 
 interface AssetAllocationProps {
   user: any;
@@ -52,18 +53,40 @@ export default function AssetAllocation({ user }: AssetAllocationProps) {
       setDepartments(dataDepts.departments || []);
       setTransfers(dataTransfers.transfers || []);
 
-      // Filter active allocations from assets list
+      // Filter active allocations from assets list based on RBAC
       const active: any[] = [];
       (dataAssets.assets || []).forEach((asset: any) => {
         if (asset.status === "Allocated" && asset.allocations) {
           const activeAlloc = asset.allocations.find((a: any) => a.status === "Active");
           if (activeAlloc) {
-            active.push({
-              ...activeAlloc,
-              assetTag: asset.tag,
-              assetName: asset.name,
-              assetId: asset.id,
-            });
+            let shouldInclude = false;
+            if (user.role === "Admin" || user.role === "AssetManager") {
+              shouldInclude = true;
+            } else if (user.role === "DeptHead") {
+              // DeptHead sees allocations for their own department OR employees in their department
+              if (activeAlloc.departmentId === user.departmentId) {
+                shouldInclude = true;
+              } else if (activeAlloc.employeeId) {
+                const emp = (dataEmployees.employees || []).find((e: any) => e.id === activeAlloc.employeeId);
+                if (emp && emp.departmentId === user.departmentId) {
+                  shouldInclude = true;
+                }
+              }
+            } else {
+              // Standard Employee sees only their own allocations
+              if (activeAlloc.employeeId === user.id) {
+                shouldInclude = true;
+              }
+            }
+
+            if (shouldInclude) {
+              active.push({
+                ...activeAlloc,
+                assetTag: asset.tag,
+                assetName: asset.name,
+                assetId: asset.id,
+              });
+            }
           }
         }
       });
@@ -235,19 +258,19 @@ export default function AssetAllocation({ user }: AssetAllocationProps) {
             You can submit a **Transfer Request** to routing approvals instead.
           </p>
           <form onSubmit={handleRaiseTransfer} className="flex flex-col sm:flex-row gap-3">
-            <select
-              required
-              value={transferTargetId}
-              onChange={(e) => setTransferTargetId(e.target.value)}
-              className="erp-input flex-1"
-            >
-              <option value="">Select Target Employee</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {emp.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex-1">
+              <CustomSelect
+                value={transferTargetId}
+                onChange={setTransferTargetId}
+                options={[
+                  { value: "", label: "Select Target Employee" },
+                  ...employees.map((emp) => ({
+                    value: String(emp.id),
+                    label: emp.name,
+                  })),
+                ]}
+              />
+            </div>
             <input
               type="text"
               required
@@ -393,21 +416,19 @@ export default function AssetAllocation({ user }: AssetAllocationProps) {
               <form onSubmit={handleAllocate} className="space-y-4">
                 <div className="flex flex-col space-y-1">
                   <label className="text-[10px] font-semibold text-(--muted)">Select Asset</label>
-                  <select
-                    required
+                  <CustomSelect
                     value={selectedAssetId}
-                    onChange={(e) => setSelectedAssetId(e.target.value)}
-                    className="erp-input"
-                  >
-                    <option value="">Choose Asset</option>
-                    {assets
-                      .filter((a) => a.status === "Available")
-                      .map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.name} ({a.tag})
-                        </option>
-                      ))}
-                  </select>
+                    onChange={setSelectedAssetId}
+                    options={[
+                      { value: "", label: "Choose Asset" },
+                      ...assets
+                        .filter((a) => a.status === "Available")
+                        .map((a) => ({
+                          value: String(a.id),
+                          label: `${a.name} (${a.tag})`,
+                        })),
+                    ]}
+                  />
                 </div>
 
                 <div className="flex space-x-4">
@@ -434,36 +455,32 @@ export default function AssetAllocation({ user }: AssetAllocationProps) {
                 {assigneeType === "employee" ? (
                   <div className="flex flex-col space-y-1">
                     <label className="text-[10px] font-semibold text-(--muted)">Target Employee</label>
-                    <select
-                      required
+                    <CustomSelect
                       value={targetEmployeeId}
-                      onChange={(e) => setTargetEmployeeId(e.target.value)}
-                      className="erp-input"
-                    >
-                      <option value="">Select Employee</option>
-                      {employees.map((emp) => (
-                        <option key={emp.id} value={emp.id}>
-                          {emp.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setTargetEmployeeId}
+                      options={[
+                        { value: "", label: "Select Employee" },
+                        ...employees.map((emp) => ({
+                          value: String(emp.id),
+                          label: emp.name,
+                        })),
+                      ]}
+                    />
                   </div>
                 ) : (
                   <div className="flex flex-col space-y-1">
                     <label className="text-[10px] font-semibold text-(--muted)">Target Department</label>
-                    <select
-                      required
+                    <CustomSelect
                       value={targetDepartmentId}
-                      onChange={(e) => setTargetDepartmentId(e.target.value)}
-                      className="erp-input"
-                    >
-                      <option value="">Select Department</option>
-                      {departments.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={setTargetDepartmentId}
+                      options={[
+                        { value: "", label: "Select Department" },
+                        ...departments.map((dept) => ({
+                          value: String(dept.id),
+                          label: dept.name,
+                        })),
+                      ]}
+                    />
                   </div>
                 )}
 

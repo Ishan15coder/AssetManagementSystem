@@ -1,6 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
+
+const COLORS = {
+  Available: "var(--success-text)",
+  Allocated: "var(--accent)",
+  UnderMaintenance: "var(--warning-text)",
+  Reserved: "var(--warning-text)",
+  Retired: "var(--danger-text)",
+  Lost: "var(--danger-text)",
+  Disposed: "var(--danger-text)",
+};
 
 export default function ReportsAnalytics() {
   const [data, setData] = useState<any>({
@@ -89,32 +100,33 @@ export default function ReportsAnalytics() {
                 Export CSV
               </button>
             </div>
-            <div className="space-y-3">
+            <div className="h-64 w-full">
               {data.statusCounts.length === 0 ? (
                 <p className="text-xs text-(--muted)">No asset records registered.</p>
               ) : (
-                data.statusCounts.map((item: any) => (
-                  <div key={item.status} className="space-y-1">
-                    <div className="flex justify-between text-xs font-medium">
-                      <span>{item.status}</span>
-                      <span>{item.count} items</span>
-                    </div>
-                    <div className="w-full h-2 bg-(--background) border border-(--border) rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${
-                          item.status === "Available"
-                            ? "bg-(--success-text)"
-                            : item.status === "Allocated"
-                            ? "bg-(--accent)"
-                            : item.status === "UnderMaintenance"
-                            ? "bg-(--warning-text)"
-                            : "bg-(--danger-text)"
-                        }`}
-                        style={{ width: `${Math.min(100, (item.count / 15) * 100)}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={data.statusCounts}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={80}
+                      paddingAngle={5}
+                      dataKey="count"
+                      nameKey="status"
+                    >
+                      {data.statusCounts.map((entry: any, index: number) => (
+                        <Cell key={`cell-${index}`} fill={(COLORS as any)[entry.status] || "var(--accent)"} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--fg)", fontSize: "12px", borderRadius: "8px" }}
+                      itemStyle={{ color: "var(--fg)" }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: "12px", color: "var(--muted)" }} />
+                  </PieChart>
+                </ResponsiveContainer>
               )}
             </div>
           </div>
@@ -138,27 +150,22 @@ export default function ReportsAnalytics() {
                 Export CSV
               </button>
             </div>
-            <div className="space-y-3">
+            <div className="h-64 w-full">
               {data.departmentAllocations.length === 0 ? (
                 <p className="text-xs text-(--muted)">No active allocations to departments.</p>
               ) : (
-                data.departmentAllocations.map((item: any) => {
-                  const percentage = Math.round((item.count / maxDept) * 100) || 5;
-                  return (
-                    <div key={item.department} className="space-y-1">
-                      <div className="flex justify-between text-xs font-medium">
-                        <span>{item.department}</span>
-                        <span>{item.count} active</span>
-                      </div>
-                      <div className="w-full h-2 bg-(--background) border border-(--border) rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-(--accent)"
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  );
-                })
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.departmentAllocations} layout="vertical" margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
+                    <XAxis type="number" stroke="var(--muted)" fontSize={10} />
+                    <YAxis dataKey="department" type="category" stroke="var(--muted)" fontSize={10} width={100} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--fg)", fontSize: "12px", borderRadius: "8px" }}
+                      cursor={{ fill: "var(--surface-2)" }}
+                    />
+                    <Bar dataKey="count" fill="var(--accent)" radius={[0, 4, 4, 0]} name="Active Allocations" />
+                  </BarChart>
+                </ResponsiveContainer>
               )}
             </div>
           </div>
@@ -430,7 +437,7 @@ export default function ReportsAnalytics() {
             <div>
               <h2 className="text-xs font-semibold text-(--muted)">Asset Portfolio — Total Book Value</h2>
               <p className="text-3xl font-extrabold tabular-nums mt-1" style={{ color: "var(--success)" }}>
-                ${data.totalPortfolioValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ₹{data.totalPortfolioValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <p className="text-[10px] text-(--muted) mt-0.5">Cumulative acquisition cost of all registered assets</p>
             </div>
@@ -479,8 +486,10 @@ export default function ReportsAnalytics() {
                           <tr key={item.category}>
                             <td className="font-semibold">{item.category}</td>
                             <td className="tabular-nums text-xs">{item.assetCount}</td>
-                            <td className="tabular-nums font-bold text-xs" style={{ color: "var(--success)" }}>
-                              ${item.totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <td>
+                              <div className="text-xs tabular-nums font-bold" style={{ color: "var(--success)" }}>
+                                ₹{item.totalValue.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </div>
                             </td>
                           </tr>
                         ))
@@ -515,8 +524,8 @@ export default function ReportsAnalytics() {
                           <div key={item.status} className="space-y-1">
                             <div className="flex justify-between text-xs font-medium">
                               <span>{item.status}</span>
-                              <span className="tabular-nums" style={{ color }}>
-                                ${item.totalValue.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              <span className="font-semibold tabular-nums" style={{ color: "var(--success)" }}>
+                                ₹{item.totalValue.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                               </span>
                             </div>
                             <div className="w-full h-2 bg-(--background) border border-(--border) rounded-full overflow-hidden">

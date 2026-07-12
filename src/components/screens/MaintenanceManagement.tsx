@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 
 interface MaintenanceManagementProps {
   user: any;
@@ -241,33 +242,31 @@ export default function MaintenanceManagement({ user }: MaintenanceManagementPro
           <form onSubmit={handleRaiseRequest} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="flex flex-col space-y-1">
               <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Select Asset</label>
-              <select
-                required
+              <CustomSelect
                 value={selectedAssetId}
-                onChange={(e) => setSelectedAssetId(e.target.value)}
-                className="erp-input"
-              >
-                <option value="">Select Asset</option>
-                {assets.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name} ({a.tag})
-                  </option>
-                ))}
-              </select>
+                onChange={setSelectedAssetId}
+                options={[
+                  { value: "", label: "Select Asset" },
+                  ...assets.map((a) => ({
+                    value: String(a.id),
+                    label: `${a.name} (${a.tag})`,
+                  })),
+                ]}
+              />
             </div>
 
             <div className="flex flex-col space-y-1">
               <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Priority Level</label>
-              <select
+              <CustomSelect
                 value={priority}
-                onChange={(e) => setPriority(e.target.value as any)}
-                className="erp-input"
-              >
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-                <option value="Critical">Critical</option>
-              </select>
+                onChange={(val) => setPriority(val as any)}
+                options={[
+                  { value: "Low", label: "Low" },
+                  { value: "Medium", label: "Medium" },
+                  { value: "High", label: "High" },
+                  { value: "Critical", label: "Critical" },
+                ]}
+              />
             </div>
 
             <div className="md:col-span-3 flex flex-col space-y-1">
@@ -304,19 +303,17 @@ export default function MaintenanceManagement({ user }: MaintenanceManagementPro
           <div className="erp-card w-full max-w-sm space-y-4">
             <h3 className="text-sm font-semibold text-(--fg)">Assign Technician</h3>
             <div className="flex flex-col space-y-3">
-              <select
-                required
+              <CustomSelect
                 value={techId}
-                onChange={(e) => setTechId(e.target.value)}
-                className="erp-input text-xs"
-              >
-                <option value="">Choose Technician...</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.name} ({emp.role})
-                  </option>
-                ))}
-              </select>
+                onChange={setTechId}
+                options={[
+                  { value: "", label: "Choose Technician..." },
+                  ...employees.map((emp) => ({
+                    value: String(emp.id),
+                    label: `${emp.name} (${emp.role})`,
+                  })),
+                ]}
+              />
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"

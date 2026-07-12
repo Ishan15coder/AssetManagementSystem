@@ -18,7 +18,14 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (user.role === "Employee") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const whereClause = user.role === "DeptHead" ? { auditorId: user.id } : undefined;
+
     const cycles = await db.auditCycle.findMany({
+      where: whereClause,
       include: {
         auditor: { select: { id: true, name: true, email: true } },
         items: {

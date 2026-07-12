@@ -41,7 +41,7 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
           (asset.allocations ?? []).forEach((alloc: any) => {
             if (alloc.status === "Active" && alloc.expectedReturnDate) {
               // Ensure standard employees only see their own overdue items
-              if (rr.isManager === false && alloc.employeeId !== user.id) return;
+              if (rr.isManager === false && String(alloc.employeeId) !== String(user.id)) return;
               
               const due = new Date(alloc.expectedReturnDate);
               if (due < now) overdue.push({ ...alloc, assetTag: asset.tag, assetName: asset.name, days: Math.round((now.getTime() - due.getTime()) / 86_400_000) });

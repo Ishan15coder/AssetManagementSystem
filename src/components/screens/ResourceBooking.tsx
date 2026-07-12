@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 
 interface ResourceBookingProps {
   user: any;
@@ -184,17 +186,15 @@ export default function ResourceBooking({ user }: ResourceBookingProps) {
       {/* Select Resource Selector */}
       <div className="erp-card bg-(--surface) p-4 flex flex-col md:flex-row items-center gap-3">
         <span className="text-xs font-semibold text-(--muted)">Active Resource:</span>
-        <select
+        <CustomSelect
           value={selectedAssetId}
-          onChange={(e) => setSelectedAssetId(e.target.value)}
-          className="erp-input flex-1 md:max-w-xs"
-        >
-          {bookableAssets.map((asset) => (
-            <option key={asset.id} value={asset.id}>
-              {asset.name} ({asset.tag})
-            </option>
-          ))}
-        </select>
+          onChange={setSelectedAssetId}
+          options={bookableAssets.map((asset) => ({
+            value: String(asset.id),
+            label: `${asset.name} (${asset.tag})`
+          }))}
+          className="flex-1 md:max-w-xs"
+        />
         {selectedAsset && (
           <span className="text-xs text-(--muted)">
             Location: <span className="text-(--foreground)">{selectedAsset.location}</span> | Condition: <span className="text-(--foreground)">{selectedAsset.condition}</span>

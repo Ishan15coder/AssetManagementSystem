@@ -13,6 +13,11 @@ async function getAuthUser() {
 
 export async function GET(request: Request) {
   try {
+    const user = await getAuthUser();
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const categoryId = searchParams.get("categoryId");
@@ -48,9 +53,27 @@ export async function GET(request: Request) {
       orderBy: { id: "desc" },
     });
 
+    // RBAC: Strip allocations the user is not authorized to see
+    if (user.role === "Employee" || user.role === "DeptHead") {
+      assets.forEach((asset) => {
+        asset.allocations = asset.allocations.filter((alloc) => {
+          if (user.role === "Employee") {
+            return alloc.employeeId === user.id;
+          } else if (user.role === "DeptHead") {
+            return (
+              alloc.departmentId === user.departmentId ||
+              (alloc.employee && alloc.employee.departmentId === user.departmentId)
+            );
+          }
+          return false;
+        });
+      });
+    }
+
     return NextResponse.json({ assets });
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch assets" }, { status: 500 });
+  } catch (error: any) {
+    console.error("GET /api/assets error:", error);
+    return NextResponse.json({ error: "Failed to fetch assets: " + error.message, stack: error.stack }, { status: 500 });
   }
 }
 

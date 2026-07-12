@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Search, Filter, QrCode, FileText, CheckCircle2 } from "lucide-react";
+import { exportToCSV } from "@/lib/export";
+import { QRCodeModal } from "@/components/ui/QRCodeModal";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 
 interface AssetDirectoryProps {
   user: any;
@@ -11,6 +15,7 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
   const [categories, setCategories] = useState<any[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<any | null>(null);
   const [assetHistory, setAssetHistory] = useState<any[]>([]);
+  const [assetToPrint, setAssetToPrint] = useState<{ tag: string; name: string } | null>(null);
   
   // Registration Form
   const [name, setName] = useState("");
@@ -196,6 +201,20 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
     }
   };
 
+  const handleExportCSV = () => {
+    const formatted = assets.map(a => ({
+      Tag: a.tag,
+      Name: a.name,
+      Category: a.category?.name || "N/A",
+      Condition: a.condition,
+      Location: a.location,
+      Status: a.status,
+      Acquisition_Date: new Date(a.acquisitionDate).toLocaleDateString(),
+      Acquisition_Cost: a.acquisitionCost
+    }));
+    exportToCSV("assets_directory.csv", formatted);
+  };
+
   const canRegister = user.role === "AssetManager" || user.role === "Admin";
 
   return (
@@ -206,7 +225,10 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
           <h1 className="text-3xl font-extrabold tracking-tight text-(--fg) mb-1">Asset Directory</h1>
           <p className="text-base text-(--muted)">Register, search, and audit corporate physical inventory and active lifecycles.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
+          <button onClick={handleExportCSV} className="erp-btn-secondary text-xs">
+            Export CSV
+          </button>
           <button onClick={() => setShowScanSim(true)} className="erp-btn-secondary text-xs">
             Scan QR Simulator
           </button>
@@ -265,19 +287,17 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
 
             <div className="flex flex-col space-y-1">
               <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Category</label>
-              <select
-                required
+              <CustomSelect
                 value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="erp-input"
-              >
-                <option value="">Select Category</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
+                onChange={setCategoryId}
+                options={[
+                  { value: "", label: "Select Category" },
+                  ...categories.map((cat) => ({
+                    value: String(cat.id),
+                    label: cat.name,
+                  })),
+                ]}
+              />
             </div>
 
             <div className="flex flex-col space-y-1">
@@ -295,16 +315,16 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
 
             <div className="flex flex-col space-y-1">
               <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Initial Condition</label>
-              <select
+              <CustomSelect
                 value={condition}
-                onChange={(e) => setCondition(e.target.value as any)}
-                className="erp-input"
-              >
-                <option value="New">New</option>
-                <option value="Good">Good</option>
-                <option value="Fair">Fair</option>
-                <option value="Poor">Poor</option>
-              </select>
+                onChange={(val) => setCondition(val as any)}
+                options={[
+                  { value: "New", label: "New" },
+                  { value: "Good", label: "Good" },
+                  { value: "Fair", label: "Fair" },
+                  { value: "Poor", label: "Poor" },
+                ]}
+              />
             </div>
 
             <div className="flex flex-col space-y-1">
@@ -373,32 +393,35 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
           className="erp-input flex-1"
           placeholder="Search by tag, name, or serial number..."
         />
-        <select
-          value={filterCategory}
-          onChange={(e) => setFilterCategory(e.target.value)}
-          className="erp-input md:w-48"
-        >
-          <option value="">All Categories</option>
-          {categories.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className="erp-input md:w-48"
-        >
-          <option value="">All Statuses</option>
-          <option value="Available">Available</option>
-          <option value="Allocated">Allocated</option>
-          <option value="Reserved">Reserved</option>
-          <option value="UnderMaintenance">Under Maintenance</option>
-          <option value="Lost">Lost</option>
-          <option value="Retired">Retired</option>
-          <option value="Disposed">Disposed</option>
-        </select>
+        <div className="md:w-48">
+          <CustomSelect
+            value={filterCategory}
+            onChange={setFilterCategory}
+            options={[
+              { value: "", label: "All Categories" },
+              ...categories.map((cat) => ({
+                value: String(cat.id),
+                label: cat.name,
+              })),
+            ]}
+          />
+        </div>
+        <div className="md:w-48">
+          <CustomSelect
+            value={filterStatus}
+            onChange={setFilterStatus}
+            options={[
+              { value: "", label: "All Statuses" },
+              { value: "Available", label: "Available" },
+              { value: "Allocated", label: "Allocated" },
+              { value: "Reserved", label: "Reserved" },
+              { value: "UnderMaintenance", label: "Under Maintenance" },
+              { value: "Lost", label: "Lost" },
+              { value: "Retired", label: "Retired" },
+              { value: "Disposed", label: "Disposed" },
+            ]}
+          />
+        </div>
       </div>
 
       {/* Directory Table */}
@@ -460,12 +483,17 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
                 <h3 className="text-sm font-semibold text-(--fg)">Asset Details & Lifecycle</h3>
                 <p className="text-xs text-(--muted)">History logs for {selectedAsset.name} ({selectedAsset.tag})</p>
               </div>
-              <button
-                onClick={() => setSelectedAsset(null)}
-                className="text-xs text-(--muted) hover:text-(--foreground) font-semibold"
-              >
-                Close Drawer
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setAssetToPrint({ tag: selectedAsset.tag, name: selectedAsset.name })} className="erp-btn-secondary text-[10px] px-2 py-1">
+                  <QrCode size={12} className="mr-1" /> Print QR
+                </button>
+                <button
+                  onClick={() => setSelectedAsset(null)}
+                  className="text-xs text-(--muted) hover:text-(--foreground) font-semibold ml-2"
+                >
+                  Close
+                </button>
+              </div>
             </div>
 
             {/* Display Photos / Documents if attached */}
@@ -491,13 +519,13 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
                     <div>
                       <p className="text-[10px] text-(--muted)">Acquisition Cost</p>
                       <p className="text-sm font-bold text-(--foreground)">
-                        ${parseFloat(selectedAsset.acquisitionCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        ₹{parseFloat(selectedAsset.acquisitionCost).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     </div>
                     <div>
                       <p className="text-[10px] text-(--muted)">Current Book Value (20% SL)</p>
                       <p className="text-sm font-bold text-(--accent)">
-                        ${(() => {
+                        ₹{(() => {
                           const cost = parseFloat(selectedAsset.acquisitionCost);
                           const acqDate = new Date(selectedAsset.acquisitionDate);
                           const ageInYears = (new Date().getTime() - acqDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
@@ -582,19 +610,17 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
               </p>
               <div className="flex flex-col space-y-1">
                 <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Select Scanned Asset Tag</label>
-                <select
-                  required
+                <CustomSelect
                   value={scanSimAssetId}
-                  onChange={(e) => setScanSimAssetId(e.target.value)}
-                  className="erp-input text-xs"
-                >
-                  <option value="">Select Asset...</option>
-                  {assets.map((asset) => (
-                    <option key={asset.id} value={asset.id}>
-                      {asset.tag} - {asset.name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setScanSimAssetId}
+                  options={[
+                    { value: "", label: "Select Asset..." },
+                    ...assets.map((asset) => ({
+                      value: String(asset.id),
+                      label: `${asset.tag} - ${asset.name}`,
+                    })),
+                  ]}
+                />
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="submit" className="erp-btn-primary text-xs" disabled={!scanSimAssetId}>
@@ -607,6 +633,14 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
             </form>
           </div>
         </div>
+      )}
+
+      {/* QR Code Printing Modal */}
+      {assetToPrint && (
+        <QRCodeModal
+          asset={assetToPrint}
+          onClose={() => setAssetToPrint(null)}
+        />
       )}
     </div>
   );
