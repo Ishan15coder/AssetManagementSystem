@@ -10,7 +10,7 @@ async function getAuthUser() {
   return verifyToken(token);
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const user = await getAuthUser();
     if (!user) {
@@ -21,15 +21,29 @@ export async function GET() {
       return NextResponse.json({ error: "Forbidden: Management privileges required" }, { status: 403 });
     }
 
-    const logs = await db.activityLog.findMany({
-      include: {
-        employee: { select: { id: true, name: true, email: true } },
-      },
-      orderBy: { timestamp: "desc" },
-      take: 100, // Cap results to prevent long outputs/loads
-    });
+    const { searchParams } = new URL(request.url);
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const skip = (page - 1) * limit;
 
-    return NextResponse.json({ logs });
+    const [total, logs] = await db.$transaction([
+      db.activityLog.count(),
+      db.activityLog.findMany({
+        skip,
+        take: limit,
+        include: {
+          employee: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { timestamp: "desc" },
+      })
+    ]);
+    
+    const totalPages = Math.ceil(total / limit);
+
+    return NextResponse.json({ 
+      logs,
+      meta: { total, page, limit, totalPages }
+    });
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch activity logs" }, { status: 500 });
   }

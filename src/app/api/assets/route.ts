@@ -23,11 +23,29 @@ export async function GET(request: Request) {
     const categoryId = searchParams.get("categoryId");
     const location = searchParams.get("location");
     const query = searchParams.get("query"); // general search for tag/name/serial
+    
+    // Pagination params
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "20", 10);
+    const skip = (page - 1) * limit;
+
+    // Advanced filtering params
+    const minPrice = searchParams.get("minPrice");
+    const maxPrice = searchParams.get("maxPrice");
+    const acquiredAfter = searchParams.get("acquiredAfter");
+    const acquiredBefore = searchParams.get("acquiredBefore");
 
     const where: any = {};
 
-    if (status) where.status = status;
-    if (categoryId) where.categoryId = parseInt(categoryId);
+    // Support multiple comma-separated statuses/categories if needed
+    if (status) {
+      const statuses = status.split(",");
+      where.status = statuses.length > 1 ? { in: statuses } : status;
+    }
+    if (categoryId) {
+      const ids = categoryId.split(",").map(Number);
+      where.categoryId = ids.length > 1 ? { in: ids } : parseInt(categoryId);
+    }
     if (location) where.location = { contains: location };
 
     if (query) {
@@ -38,20 +56,37 @@ export async function GET(request: Request) {
       ];
     }
 
-    const assets = await db.asset.findMany({
-      where,
-      include: {
-        category: { select: { id: true, name: true } },
-        allocations: {
-          where: { status: "Active" },
-          include: {
-            employee: { select: { id: true, name: true, email: true } },
-            department: { select: { id: true, name: true } },
+    // Apply numerical/date advanced filters
+    if (minPrice || maxPrice) {
+      where.acquisitionCost = {};
+      if (minPrice) where.acquisitionCost.gte = parseFloat(minPrice);
+      if (maxPrice) where.acquisitionCost.lte = parseFloat(maxPrice);
+    }
+    if (acquiredAfter || acquiredBefore) {
+      where.acquisitionDate = {};
+      if (acquiredAfter) where.acquisitionDate.gte = new Date(acquiredAfter);
+      if (acquiredBefore) where.acquisitionDate.lte = new Date(acquiredBefore);
+    }
+
+    const [total, assets] = await db.$transaction([
+      db.asset.count({ where }),
+      db.asset.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          category: { select: { id: true, name: true } },
+          allocations: {
+            where: { status: "Active" },
+            include: {
+              employee: { select: { id: true, name: true, email: true } },
+              department: { select: { id: true, name: true } },
+            },
           },
         },
-      },
-      orderBy: { id: "desc" },
-    });
+        orderBy: { id: "desc" },
+      })
+    ]);
 
     // RBAC: Strip allocations the user is not authorized to see
     if (user.role === "Employee" || user.role === "DeptHead") {
@@ -70,7 +105,12 @@ export async function GET(request: Request) {
       });
     }
 
-    return NextResponse.json({ assets });
+    const totalPages = Math.ceil(total / limit);
+
+    return NextResponse.json({ 
+      assets, 
+      meta: { total, page, limit, totalPages } 
+    });
   } catch (error: any) {
     console.error("GET /api/assets error:", error);
     return NextResponse.json({ error: "Failed to fetch assets: " + error.message, stack: error.stack }, { status: 500 });

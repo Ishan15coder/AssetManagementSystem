@@ -7,6 +7,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis
 import { exportToCSV } from "@/lib/export";
 import { QRCodeModal } from "@/components/ui/QRCodeModal";
 import { CustomSelect } from "@/components/ui/CustomSelect";
+import { Pagination } from "@/components/ui/Pagination";
 
 interface AssetDirectoryProps {
   user: any;
@@ -45,6 +46,15 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
+  const [meta, setMeta] = useState({ total: 0, page: 1, limit: 20, totalPages: 1 });
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [showAdvFilters, setShowAdvFilters] = useState(false);
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [acquiredAfter, setAcquiredAfter] = useState("");
+  const [acquiredBefore, setAcquiredBefore] = useState("");
+
+
   // Upload/QR Scan Simulation
   const [uploading, setUploading] = useState(false);
   const [showScanSim, setShowScanSim] = useState(false);
@@ -54,17 +64,26 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const loadAssets = async () => {
+  const loadAssets = async (page = meta.page) => {
     try {
-      const q = searchQuery ? `&query=${encodeURIComponent(searchQuery)}` : "";
-      const c = filterCategory ? `&categoryId=${filterCategory}` : "";
-      const s = filterStatus ? `&status=${filterStatus}` : "";
+      setLoading(true);
+      const params = new URLSearchParams({ page: String(page), limit: "20" });
+      if (searchQuery) params.append("query", searchQuery);
+      if (filterCategory) params.append("categoryId", filterCategory);
+      if (filterStatus) params.append("status", filterStatus);
+      if (minPrice) params.append("minPrice", minPrice);
+      if (maxPrice) params.append("maxPrice", maxPrice);
+      if (acquiredAfter) params.append("acquiredAfter", acquiredAfter);
+      if (acquiredBefore) params.append("acquiredBefore", acquiredBefore);
       
-      const res = await fetch(`/api/assets?${q}${c}${s}`);
+      const res = await fetch(`/api/assets?${params.toString()}`);
       const data = await res.json();
       setAssets(data.assets || []);
+      if (data.meta) setMeta(data.meta);
     } catch (err) {
       console.error("Failed to load assets", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -79,9 +98,9 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
   };
 
   useEffect(() => {
-    loadAssets();
+    loadAssets(1);
     loadCategories();
-  }, [searchQuery, filterCategory, filterStatus]);
+  }, [searchQuery, filterCategory, filterStatus, minPrice, maxPrice, acquiredAfter, acquiredBefore]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "photo" | "doc") => {
     const file = e.target.files?.[0];
@@ -185,6 +204,35 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
     }
   };
 
+  const toggleSelectAll = () => {
+    if (selectedIds.length === assets.length) setSelectedIds([]);
+    else setSelectedIds(assets.map(a => a.id));
+  };
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const handleBulkAction = async (action: "UPDATE_STATUS" | "DELETE", status?: string) => {
+    if (!confirm(`Are you sure you want to perform this action on ${selectedIds.length} assets?`)) return;
+    try {
+      setLoading(true);
+      const res = await fetch("/api/assets/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, assetIds: selectedIds, status })
+      });
+      if (!res.ok) throw new Error("Bulk action failed");
+      setSuccess(`Bulk action completed for ${selectedIds.length} assets`);
+      setSelectedIds([]);
+      loadAssets(meta.page);
+    } catch(err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "Available":
@@ -214,7 +262,7 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
       Acquisition_Date: new Date(a.acquisitionDate).toLocaleDateString(),
       Acquisition_Cost: a.acquisitionCost
     }));
-    exportToCSV("assets_directory.csv", formatted);
+    exportToCSV(`assets_page_${meta.page}.csv`, formatted);
   };
 
   const canRegister = user.role === "AssetManager" || user.role === "Admin";
@@ -269,6 +317,27 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
           )}
         </div>
       </div>
+
+      
+      {selectedIds.length > 0 && (
+        <div className="bg-(--surface-2) border border-(--accent) p-3 rounded-md flex items-center justify-between mb-4 animate-slide-up">
+          <span className="text-sm font-semibold text-(--accent)">{selectedIds.length} assets selected</span>
+          <div className="flex gap-2">
+            <CustomSelect
+              value=""
+              onChange={(val) => handleBulkAction("UPDATE_STATUS", val as string)}
+              options={[
+                { value: "", label: "Change Status..." },
+                { value: "Available", label: "Set Available" },
+                { value: "Retired", label: "Set Retired" },
+                { value: "Lost", label: "Set Lost" },
+              ]}
+            />
+            <button onClick={() => handleBulkAction("DELETE")} className="erp-btn-secondary text-(--danger-text) border-(--danger-text)">Delete Selected</button>
+          </div>
+        </div>
+      )}
+
 
       {error && (
         <div className="p-3 text-xs font-medium border border-red-950/20 bg-red-950/10 text-(--danger-text)">
@@ -535,6 +604,9 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
             ) : (
               assets.map((asset) => (
                 <tr key={asset.id}>
+                  <td className="text-center">
+                    <input type="checkbox" className="accent-white" checked={selectedIds.includes(asset.id)} onChange={() => toggleSelect(asset.id)} />
+                  </td>
                   <td className="tech-code font-bold text-(--accent)">{asset.tag}</td>
                   <td>
                     <div className="font-semibold">{asset.name}</div>
@@ -562,6 +634,44 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
       </div>
 
       {/* Slide-out History Timeline Drawer */}
+      
+      {/* Slide-out Advanced Filters Drawer */}
+      {showAdvFilters && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-400 flex justify-end">
+          <div className="w-full max-w-sm bg-(--surface) border-l border-(--border) p-6 overflow-y-auto flex flex-col h-full text-(--foreground)">
+            <div className="flex justify-between items-center border-b border-(--border) pb-4 mb-4">
+              <h3 className="text-sm font-semibold text-(--fg)">Advanced Filters</h3>
+              <button onClick={() => setShowAdvFilters(false)} className="text-xs text-(--muted) hover:text-(--foreground) font-semibold">Close</button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Min Price ($)</label>
+                <input type="number" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} className="erp-input" />
+              </div>
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Max Price ($)</label>
+                <input type="number" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className="erp-input" />
+              </div>
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Acquired After</label>
+                <input type="date" value={acquiredAfter} onChange={(e) => setAcquiredAfter(e.target.value)} className="erp-input" />
+              </div>
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Acquired Before</label>
+                <input type="date" value={acquiredBefore} onChange={(e) => setAcquiredBefore(e.target.value)} className="erp-input" />
+              </div>
+
+              <div className="pt-4 border-t border-(--border) flex gap-2">
+                <button onClick={() => { setMinPrice(""); setMaxPrice(""); setAcquiredAfter(""); setAcquiredBefore(""); loadAssets(1); }} className="erp-btn-secondary flex-1">Clear</button>
+                <button onClick={() => { setShowAdvFilters(false); loadAssets(1); }} className="erp-btn-primary flex-1">Apply</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+
       {selectedAsset && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-400 flex justify-end">
           <div className="w-full max-w-lg bg-(--surface) border-l border-(--border) p-6 overflow-y-auto flex flex-col h-full text-(--foreground)">

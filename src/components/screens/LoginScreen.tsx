@@ -32,7 +32,7 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: demoEmail, password: "Demo@123" }),
+        body: JSON.stringify({ email: demoEmail, password: "password123" }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Login failed");

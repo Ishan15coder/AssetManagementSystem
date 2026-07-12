@@ -1,34 +1,39 @@
-export function exportToCSV(filename: string, rows: Record<string, any>[]) {
-  if (!rows || !rows.length) return;
-
-  const separator = ",";
-  const keys = Object.keys(rows[0]);
-  
+/**
+ * Downloads a standard CSV file directly in the user's browser.
+ *
+ * @param filename - The name of the file (without .csv extension)
+ * @param headers - Array of string column headers
+ * @param rows - 2D array representing data rows
+ */
+export function downloadCSV(filename: string, headers: string[], rows: any[][]) {
   const csvContent = [
-    keys.join(separator),
-    ...rows.map(row => {
-      return keys.map(k => {
-        let cell = row[k] === null || row[k] === undefined ? "" : row[k];
-        cell = cell instanceof Date
-          ? cell.toLocaleString()
-          : cell.toString().replace(/"/g, '""');
-        if (cell.search(/("|,|\n)/g) >= 0) {
-          cell = `"${cell}"`;
-        }
-        return cell;
-      }).join(separator);
-    })
+    headers.join(","),
+    ...rows.map((row) =>
+      row.map((cell) => {
+        if (cell === null || cell === undefined) return '""';
+        return `"${String(cell).replace(/"/g, '""')}"`;
+      }).join(",")
+    ),
   ].join("\n");
 
   const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
   const link = document.createElement("a");
-  if (link.download !== undefined) {
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute("download", `${filename}.csv`);
+  link.style.visibility = "hidden";
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
+
+/**
+ * Legacy exportToCSV for array of objects (used in ReportsAnalytics)
+ */
+export function exportToCSV(filename: string, data: Record<string, any>[]) {
+  if (data.length === 0) return;
+  const headers = Object.keys(data[0]);
+  const rows = data.map((item) => headers.map((h) => item[h]));
+  downloadCSV(filename.replace(".csv", ""), headers, rows);
+}
+
