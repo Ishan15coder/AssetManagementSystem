@@ -84,13 +84,13 @@ export default function MainLayout({
     >
       {/* Brand */}
       <div
-        className="px-5 py-5 flex items-center gap-3"
+        className="px-5 py-5 flex items-center gap-3.5"
         style={{ borderBottom: "1px solid var(--sidebar-border)" }}
       >
         <img
           src="/assetflow_logo_transparent_white.png"
           alt="AssetFlow Logo"
-          className="h-14 w-14 rounded-(--radius-md) bg-white/5 p-1 object-contain shrink-0"
+          className="h-16 w-16 rounded-(--radius-md) bg-white/5 p-1 object-contain shrink-0"
         />
         <span
           className="font-bold text-3xl tracking-tight"
@@ -218,11 +218,11 @@ export default function MainLayout({
               <line x1="3" y1="18" x2="21" y2="18"/>
             </svg>
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <img
               src="/assetflow_logo_transparent_white.png"
               alt="AssetFlow Logo"
-              className="h-11 w-11 rounded-(--radius-md) bg-white/5 p-1 object-contain shrink-0"
+              className="h-14 w-14 rounded-(--radius-md) bg-white/5 p-1 object-contain shrink-0"
             />
             <span className="text-2xl font-bold tracking-tight" style={{ color: "var(--sidebar-fg)" }}>AssetFlow</span>
           </div>

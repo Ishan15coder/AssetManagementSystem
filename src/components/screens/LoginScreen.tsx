@@ -98,40 +98,64 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       style={{ fontFamily: "var(--font-sans)" }}
     >
       {/* Left brand panel — visible md+ */}
-      <div className="hidden md:flex flex-col justify-between w-[42%] max-w-md bg-(--accent) px-12 py-14">
+      <div className="hidden md:flex flex-col justify-between w-[45%] max-w-lg bg-(--accent) px-12 py-14">
         {/* Logo */}
-        <div className="flex items-center gap-2.5">
-          <img
-            src="/assetflow_logo_transparent_white.png"
-            alt="AssetFlow Logo"
-            className="h-10 w-10 rounded-xl bg-white/10 p-1 object-contain shrink-0"
-          />
-          <span className="text-white font-semibold text-base tracking-tight">AssetFlow</span>
+        <div className="flex items-center">
+          <span className="text-white font-bold text-3xl tracking-tight">AssetFlow</span>
         </div>
 
-        {/* Hero text */}
-        <div>
-          <h1
-            className="text-3xl font-semibold text-white leading-snug"
-            style={{ textWrap: "balance" }}
-          >
-            Track, allocate, and audit every corporate asset — in one place.
-          </h1>
-          <p className="mt-4 text-sm text-white/70 leading-relaxed max-w-xs">
-            A modern ERP built for IT, operations, and finance teams that need clarity at every step of an asset's lifecycle.
-          </p>
+        {/* Hero text & Mock Ledger */}
+        <div className="space-y-8">
+          <div>
+            <h1
+              className="text-4xl font-extrabold text-white leading-tight"
+              style={{ textWrap: "balance" }}
+            >
+              Track, allocate, and audit every corporate asset — in one place.
+            </h1>
+            <p className="mt-5 text-base text-white/70 leading-relaxed max-w-sm">
+              A modern ERP built for IT, operations, and finance teams that need clarity at every step of an asset's lifecycle.
+            </p>
+          </div>
+
+          {/* Theme element: Mock Asset Ledger Card */}
+          <div className="p-5 rounded-(--radius-md) border border-white/10 bg-white/5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-white/40">Active Allocation Ledger</span>
+              <span className="flex items-center gap-1.5 text-[10px] text-white/60">
+                <span className="h-1.5 w-1.5 rounded-full bg-green-500"></span>
+                Operational
+              </span>
+            </div>
+            <div className="space-y-2">
+              {[
+                { tag: "AF-1082", name: "Dell UltraSharp 32\"", status: "Allocated", assignee: "David Kim", statusColor: "text-white bg-white/10" },
+                { tag: "AF-0943", name: "MacBook Pro M3 Max", status: "In Repair", assignee: "Maintenance Team", statusColor: "text-amber-300 bg-amber-500/10" },
+              ].map(item => (
+                <div key={item.tag} className="flex items-center justify-between p-2.5 rounded-(--radius-sm) bg-white/5 border border-white/5 text-xs">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-white truncate">{item.name}</p>
+                    <p className="text-[10px] text-white/40 mt-0.5">Tag: {item.tag} · {item.assignee}</p>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium shrink-0 ml-3 ${item.statusColor}`}>
+                    {item.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
         {/* Bottom stat strip */}
-        <div className="flex gap-8">
+        <div className="flex gap-10">
           {[
             { value: "6 modules", label: "Fully integrated" },
             { value: "RBAC",      label: "Role-based access" },
             { value: "SQLite",    label: "Zero config db" },
           ].map(s => (
             <div key={s.label}>
-              <p className="text-white font-semibold text-sm">{s.value}</p>
-              <p className="text-white/60 text-xs mt-0.5">{s.label}</p>
+              <p className="text-white font-bold text-base">{s.value}</p>
+              <p className="text-white/55 text-xs mt-0.5">{s.label}</p>
             </div>
           ))}
         </div>
@@ -141,13 +165,8 @@ export default function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
       <div className="flex-1 flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
-          <div className="flex items-center gap-2 mb-8 md:hidden">
-            <img
-              src="/assetflow_logo_transparent_black.png"
-              alt="AssetFlow Logo"
-              className="h-9 w-9 rounded-xl bg-(--surface-2) p-1 object-contain shrink-0"
-            />
-            <span className="font-semibold text-(--fg) text-sm">AssetFlow</span>
+          <div className="flex items-center mb-8 md:hidden">
+            <span className="font-bold text-(--fg) text-2xl tracking-tight">AssetFlow</span>
           </div>
 
           <h2 className="text-xl font-semibold text-(--fg) mb-1">
