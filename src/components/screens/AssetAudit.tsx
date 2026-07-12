@@ -124,7 +124,7 @@ export default function AssetAudit({ user }: AssetAuditProps) {
   const canAudit = isAssignedAuditor || canManage;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-slide-up">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>

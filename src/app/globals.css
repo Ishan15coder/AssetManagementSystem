@@ -251,7 +251,7 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
-  background-color: var(--surface);
+  background-color: transparent;      /* ghost — no fill */
   color: var(--fg);
   border: 1px solid var(--border);
   font-weight: 400;
@@ -265,7 +265,10 @@ html, body {
               border-color var(--duration-fast) var(--ease-out);
   white-space: nowrap;
 }
-.erp-btn-secondary:hover:not(:disabled) { background-color: var(--surface-2); }
+.erp-btn-secondary:hover:not(:disabled) {
+  background-color: var(--surface-2);
+  border-color: var(--border);
+}
 .erp-btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
 
 /* ─── Badges ───────────────────────────────────────────────────── */
@@ -289,6 +292,38 @@ html, body {
   font-size: 0.8125rem;
   letter-spacing: -0.01em;
 }
+
+/* ─── Page-level entrance animations ──────────────────────────── */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.animate-slide-up  { animation: slide-up  320ms var(--ease-out) both; }
+.animate-fade-in   { animation: fade-in   240ms ease both; }
+.animate-scale-in  { animation: scale-in  280ms var(--ease-out) both; }
+
+/* Stagger helpers — add delay via Tailwind or inline style */
+.stagger-1 { animation-delay: 60ms; }
+.stagger-2 { animation-delay: 120ms; }
+.stagger-3 { animation-delay: 180ms; }
+.stagger-4 { animation-delay: 240ms; }
+.stagger-5 { animation-delay: 300ms; }
+
+/* Skeleton pulse */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+.skeleton { animation: skeleton-pulse 1.4s ease-in-out infinite; background: var(--surface-2); border-radius: var(--radius-sm); }
 
 /* ─── Scrollbar ────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }

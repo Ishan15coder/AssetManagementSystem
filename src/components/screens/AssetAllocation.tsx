@@ -208,7 +208,7 @@ export default function AssetAllocation({ user }: AssetAllocationProps) {
   const canManage = user.role === "AssetManager" || user.role === "Admin";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-slide-up">
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold tracking-tight mb-1">Asset Allocation & Transfers</h1>

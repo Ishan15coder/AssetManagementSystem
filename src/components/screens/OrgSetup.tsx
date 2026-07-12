@@ -131,7 +131,7 @@ export default function OrgSetup({ user }: OrgSetupProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-slide-up">
       {/* Header section */}
       <div>
         <h1 className="text-lg font-semibold text-[var(--fg)]">Organization</h1>

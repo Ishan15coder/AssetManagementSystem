@@ -114,7 +114,7 @@ export default function ResourceBooking({ user }: ResourceBookingProps) {
   const selectedAsset = bookableAssets.find((a) => String(a.id) === selectedAssetId);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-slide-up">
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold tracking-tight mb-1">Resource Booking Scheduler</h1>

@@ -8,10 +8,11 @@ interface DashboardOverviewProps {
 }
 
 export default function DashboardOverview({ user, setActiveScreen }: DashboardOverviewProps) {
-  const [stats, setStats] = useState({ available: 0, allocated: 0, maintenance: 0, bookings: 0, overdue: 0 });
+  const [stats, setStats]           = useState({ available: 0, allocated: 0, maintenance: 0, bookings: 0, overdue: 0 });
   const [overdueItems, setOverdueItems] = useState<any[]>([]);
   const [recentLogs, setRecentLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]       = useState(true);
+  const [visible, setVisible]       = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -23,7 +24,7 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
         ]);
 
         const sc = rr.statusCounts ?? [];
-        const count = (status: string) => sc.find((s: any) => s.status === status)?.count ?? 0;
+        const count = (status: string) => Number(sc.find((s: any) => s.status === status)?._count?.id ?? sc.find((s: any) => s.status === status)?.count ?? 0);
 
         const now = new Date();
         const overdue: any[] = [];
@@ -36,70 +37,138 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
           });
         });
 
-        setStats({ available: count("Available"), allocated: count("Allocated"), maintenance: count("UnderMaintenance"), bookings: (rr.resourceBookings ?? []).reduce((a: number, b: any) => a + b.count, 0), overdue: overdue.length });
+        setStats({
+          available:   count("Available"),
+          allocated:   count("Allocated"),
+          maintenance: count("UnderMaintenance"),
+          bookings:    (rr.resourceBookings ?? []).reduce((a: number, b: any) => a + Number(b.count ?? 0), 0),
+          overdue:     overdue.length,
+        });
         setOverdueItems(overdue);
-        setRecentLogs((rl.logs ?? []).slice(0, 6));
-      } catch { /* silent */ } finally { setLoading(false); }
+        setRecentLogs((rl.logs ?? []).slice(0, 8));
+      } catch { /* silent */ } finally {
+        setLoading(false);
+        setTimeout(() => setVisible(true), 60);
+      }
     };
     load();
   }, []);
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-48 text-sm text-[var(--muted)]">Loading…</div>
-  );
+  const humanizeAction = (a: string) =>
+    a.replace(/([A-Z])/g, " $1").trim().toLowerCase().replace(/^./, s => s.toUpperCase());
+
+  function timeAgo(ts: string) {
+    const diff = Date.now() - new Date(ts).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1)  return "just now";
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return new Date(ts).toLocaleDateString();
+  }
 
   const isManager = user.role === "Admin" || user.role === "AssetManager";
 
+  const statItems = [
+    { label: "Available",  value: stats.available,   color: "var(--success)" },
+    { label: "Allocated",  value: stats.allocated,   color: "var(--fg)" },
+    { label: "In repair",  value: stats.maintenance, color: "var(--warning)" },
+    { label: "Bookings",   value: stats.bookings,    color: "var(--fg)" },
+    { label: "Overdue",    value: stats.overdue,     color: stats.overdue > 0 ? "var(--danger)" : "var(--fg)" },
+  ];
+
   return (
-    <div className="space-y-8">
-      {/* Page heading */}
+    <div
+      className="space-y-8"
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? "translateY(0)" : "translateY(12px)",
+        transition: "opacity 320ms ease, transform 320ms ease",
+      }}
+    >
+      {/* Heading */}
       <div>
-        <h1 className="text-lg font-semibold text-[var(--fg)]">Overview</h1>
-        <p className="text-sm text-[var(--muted)] mt-0.5">Real-time asset counts and recent activity.</p>
+        <h1 className="text-lg font-semibold" style={{ color: "var(--fg)" }}>Overview</h1>
+        <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>Real-time asset counts and recent activity.</p>
       </div>
 
-      {/* Stats strip — not a card grid, a horizontal divider row like Stripe */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-[var(--border)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] shadow-[var(--shadow-xs)]">
-        {[
-          { label: "Available",    value: stats.available,   color: "var(--success)" },
-          { label: "Allocated",    value: stats.allocated,   color: "var(--accent)" },
-          { label: "In repair",    value: stats.maintenance, color: "var(--warning)" },
-          { label: "Bookings",     value: stats.bookings,    color: "var(--fg)" },
-          { label: "Overdue",      value: stats.overdue,     color: "var(--danger)", alert: stats.overdue > 0 },
-        ].map(s => (
-          <div key={s.label} className="px-5 py-4">
-            <p className="text-xs text-[var(--muted)] font-medium">{s.label}</p>
-            <p className="text-2xl font-semibold mt-1" style={{ color: s.color }}>{s.value}</p>
-          </div>
-        ))}
-      </div>
+      {/* Stats strip */}
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px" style={{ background: "var(--border)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}>
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="px-5 py-5 animate-pulse" style={{ background: "var(--surface)" }}>
+              <div className="h-3 w-16 rounded mb-3" style={{ background: "var(--surface-2)" }} />
+              <div className="h-8 w-10 rounded" style={{ background: "var(--surface-2)" }} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-px"
+          style={{ background: "var(--border)", border: "1px solid var(--border)", borderRadius: "var(--radius-md)", overflow: "hidden" }}
+        >
+          {statItems.map((s, i) => (
+            <div
+              key={s.label}
+              className="px-5 py-5"
+              style={{
+                background: "var(--surface)",
+                opacity: visible ? 1 : 0,
+                transform: visible ? "translateY(0)" : "translateY(10px)",
+                transition: `opacity 300ms ease ${80 + i * 60}ms, transform 300ms ease ${80 + i * 60}ms`,
+              }}
+            >
+              <p className="text-xs font-medium" style={{ color: "var(--muted)" }}>{s.label}</p>
+              <p
+                className="mt-2 font-semibold tabular-nums"
+                style={{ fontSize: "1.875rem", lineHeight: 1, color: s.color }}
+              >
+                {s.value}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Quick actions */}
       <div className="flex flex-wrap gap-2">
         {isManager && (
-          <button onClick={() => setActiveScreen("assets")} className="erp-btn-primary text-sm">
+          <button onClick={() => setActiveScreen("assets")} className="erp-btn-primary">
             Register asset
           </button>
         )}
-        <button onClick={() => setActiveScreen("bookings")}    className="erp-btn-secondary text-sm">Book a resource</button>
-        <button onClick={() => setActiveScreen("maintenance")} className="erp-btn-secondary text-sm">Raise maintenance ticket</button>
+        <button onClick={() => setActiveScreen("bookings")}    className="erp-btn-secondary">Book a resource</button>
+        <button onClick={() => setActiveScreen("maintenance")} className="erp-btn-secondary">Raise maintenance ticket</button>
         {user.role === "Admin" && (
-          <button onClick={() => setActiveScreen("org-setup")} className="erp-btn-secondary text-sm">Manage organization</button>
+          <button onClick={() => setActiveScreen("org-setup")} className="erp-btn-secondary">Manage organization</button>
         )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Overdue table */}
-        <div className="lg:col-span-3">
-          <div className="ui-card">
+        {/* Overdue */}
+        <div
+          className="lg:col-span-3"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(14px)",
+            transition: "opacity 340ms ease 200ms, transform 340ms ease 200ms",
+          }}
+        >
+          <div className="ui-card h-full">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-[var(--fg)]">Overdue returns</h2>
+              <h2 className="text-sm font-semibold" style={{ color: "var(--fg)" }}>Overdue returns</h2>
               {overdueItems.length > 0 && (
                 <span className="badge badge-danger">{overdueItems.length} overdue</span>
               )}
             </div>
-            {overdueItems.length === 0 ? (
-              <p className="text-sm text-[var(--muted)] py-4 text-center">No overdue assets.</p>
+            {loading ? (
+              <div className="space-y-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="h-10 rounded animate-pulse" style={{ background: "var(--surface-2)" }} />
+                ))}
+              </div>
+            ) : overdueItems.length === 0 ? (
+              <p className="text-sm py-4 text-center" style={{ color: "var(--muted)" }}>No overdue assets — all clear.</p>
             ) : (
               <table className="erp-table">
                 <thead>
@@ -107,19 +176,23 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
                     <th>Tag</th>
                     <th>Asset</th>
                     <th>Held by</th>
-                    <th>Days overdue</th>
+                    <th>Overdue</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   {overdueItems.map((item, i) => (
                     <tr key={i}>
-                      <td><span className="tech-code text-[var(--accent)] font-medium">{item.assetTag}</span></td>
-                      <td className="font-medium text-[var(--fg)]">{item.assetName}</td>
-                      <td className="text-[var(--muted)]">{item.employee?.name ?? "—"}</td>
+                      <td><span className="tech-code font-medium" style={{ color: "var(--accent)" }}>{item.assetTag}</span></td>
+                      <td className="font-medium" style={{ color: "var(--fg)" }}>{item.assetName}</td>
+                      <td style={{ color: "var(--muted)" }}>{item.employee?.name ?? "—"}</td>
                       <td><span className="badge badge-danger">{item.days}d</span></td>
                       <td>
-                        <button onClick={() => setActiveScreen("allocations")} className="text-xs text-[var(--accent)] hover:underline font-medium">
+                        <button
+                          onClick={() => setActiveScreen("allocations")}
+                          className="text-xs font-medium underline-offset-2 hover:underline transition-colors"
+                          style={{ color: "var(--fg)" }}
+                        >
                           Resolve
                         </button>
                       </td>
@@ -131,25 +204,53 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
           </div>
         </div>
 
-        {/* Activity log */}
-        <div className="lg:col-span-2">
+        {/* Recent activity */}
+        <div
+          className="lg:col-span-2"
+          style={{
+            opacity: visible ? 1 : 0,
+            transform: visible ? "translateY(0)" : "translateY(14px)",
+            transition: "opacity 340ms ease 280ms, transform 340ms ease 280ms",
+          }}
+        >
           <div className="ui-card h-full">
-            <h2 className="text-sm font-semibold text-[var(--fg)] mb-4">Recent activity</h2>
-            <div className="space-y-3">
-              {recentLogs.length === 0 ? (
-                <p className="text-sm text-[var(--muted)]">No recent activity.</p>
-              ) : recentLogs.map(log => (
-                <div key={log.id} className="pb-3 border-b border-[var(--border-subtle)] last:border-0 last:pb-0">
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="text-sm text-[var(--fg)] leading-snug">{log.details}</p>
-                    <span className="text-xs text-[var(--muted)] whitespace-nowrap">
-                      {new Date(log.timestamp).toLocaleDateString()}
-                    </span>
+            <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--fg)" }}>Recent activity</h2>
+            {loading ? (
+              <div className="space-y-3">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="h-10 rounded animate-pulse" style={{ background: "var(--surface-2)" }} />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-0">
+                {recentLogs.length === 0 ? (
+                  <p className="text-sm" style={{ color: "var(--muted)" }}>No recent activity.</p>
+                ) : recentLogs.map((log, i) => (
+                  <div
+                    key={log.id}
+                    className="py-2.5 border-b last:border-0"
+                    style={{
+                      borderColor: "var(--border-subtle)",
+                      opacity: visible ? 1 : 0,
+                      transform: visible ? "translateY(0)" : "translateY(6px)",
+                      transition: `opacity 260ms ease ${320 + i * 35}ms, transform 260ms ease ${320 + i * 35}ms`,
+                    }}
+                  >
+                    <div className="flex justify-between gap-3 items-baseline">
+                      <p className="text-sm font-medium leading-snug" style={{ color: "var(--fg)" }}>
+                        {humanizeAction(log.action)}
+                      </p>
+                      <span className="text-xs flex-shrink-0 tabular-nums" style={{ color: "var(--muted)" }}>
+                        {timeAgo(log.timestamp)}
+                      </span>
+                    </div>
+                    {log.details && (
+                      <p className="text-xs mt-0.5 truncate" style={{ color: "var(--muted)" }}>{log.details}</p>
+                    )}
                   </div>
-                  <p className="text-xs text-[var(--muted)] mt-0.5 tech-code">{log.action}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -185,7 +185,7 @@ export default function MaintenanceManagement({ user }: MaintenanceManagementPro
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-slide-up">
       {/* Header */}
       <div className="flex justify-between items-start">
         <div>

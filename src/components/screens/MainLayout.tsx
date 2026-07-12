@@ -142,7 +142,7 @@ export default function MainLayout({
       {/* Sidebar */}
       <aside
         className={[
-          "fixed top-0 left-0 z-[300] h-screen w-56 flex flex-col",
+          "fixed top-0 left-0 z-[300] h-screen w-64 flex flex-col",
           "md:translate-x-0 md:static md:z-auto",
           mobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
         ].join(" ")}

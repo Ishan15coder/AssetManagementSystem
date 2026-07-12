@@ -2,64 +2,113 @@
 
 import { useState, useEffect } from "react";
 
+/* Maps raw DB enum strings → human-readable sentence case labels */
+const ACTION_LABELS: Record<string, string> = {
+  RegisterAsset:       "Asset registered",
+  UpdateAsset:         "Asset updated",
+  DeleteAsset:         "Asset deleted",
+  AllocateAsset:       "Asset allocated",
+  ReturnAsset:         "Asset returned",
+  TransferAsset:       "Asset transferred",
+  CreateBooking:       "Booking created",
+  CancelBooking:       "Booking cancelled",
+  CreateMaintenance:   "Maintenance request raised",
+  UpdateMaintenance:   "Maintenance status updated",
+  CloseMaintenance:    "Maintenance closed",
+  CreateAudit:         "Audit cycle started",
+  UpdateAuditItem:     "Audit item checked",
+  CloseAudit:          "Audit cycle closed",
+  PromoteEmployee:     "Employee promoted",
+  CreateDepartment:    "Department created",
+  CreateCategory:      "Category created",
+  Login:               "User signed in",
+  Logout:              "User signed out",
+};
+
+function humanize(action: string): string {
+  if (ACTION_LABELS[action]) return ACTION_LABELS[action];
+  /* Fallback: split camelCase → "Asset allocated" */
+  return action
+    .replace(/([A-Z])/g, " $1")
+    .trim()
+    .toLowerCase()
+    .replace(/^./, s => s.toUpperCase());
+}
+
+function timeAgo(ts: string): string {
+  const diff = Date.now() - new Date(ts).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return new Date(ts).toLocaleDateString();
+}
+
 export default function ActivityLogs() {
-  const [logs, setLogs] = useState<any[]>([]);
+  const [logs, setLogs]       = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const loadLogs = async () => {
-      try {
-        const res = await fetch("/api/logs");
-        const data = await res.json();
-        setLogs(data.logs || []);
-      } catch (err) {
-        console.error(err);
-      } finally {
+    fetch("/api/logs")
+      .then(r => r.json())
+      .then(d => setLogs(d.logs || []))
+      .catch(() => {})
+      .finally(() => {
         setLoading(false);
-      }
-    };
-    loadLogs();
+        /* Stagger-in animation trigger */
+        setTimeout(() => setVisible(true), 60);
+      });
   }, []);
-
-  if (loading) {
-    return <div className="text-xs text-[var(--muted)]">Loading activity log registry...</div>;
-  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
-        <h1 className="text-xl font-bold tracking-tight mb-1">System Activity Logs</h1>
-        <p className="text-xs text-[var(--muted)]">Review audit trails, administrative state changes, and hardware tracking histories.</p>
+        <h1 className="text-lg font-semibold" style={{ color: "var(--fg)" }}>Activity log</h1>
+        <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>
+          Append-only audit trail of every action in the system.
+        </p>
       </div>
 
-      {/* Logs list */}
-      <div className="erp-card bg-[var(--surface)] space-y-4">
-        <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--muted)]">Append-Only Audit Stream</h2>
-        <div className="space-y-3">
-          {logs.length === 0 ? (
-            <p className="text-xs text-[var(--muted)]">No logs recorded in this session.</p>
-          ) : (
-            logs.map((log) => (
-              <div key={log.id} className="p-3 border border-[var(--border)] bg-[var(--background)] flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-                <div className="space-y-1">
-                  <div className="flex items-center space-x-2">
-                    <span className="tech-code text-xs font-bold text-[var(--accent)]">
-                      {log.action}
-                    </span>
-                    <span className="text-[10px] text-[var(--muted)]">
-                      by {log.employee?.name || "System"} ({log.employee?.email || "automated"})
-                    </span>
-                  </div>
-                  <p className="text-xs text-[var(--muted)]">{log.details}</p>
+      <div className="ui-card">
+        {loading ? (
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-14 rounded-lg animate-pulse" style={{ background: "var(--surface-2)" }} />
+            ))}
+          </div>
+        ) : logs.length === 0 ? (
+          <p className="text-sm text-center py-8" style={{ color: "var(--muted)" }}>No activity recorded yet.</p>
+        ) : (
+          <div className="space-y-0">
+            {logs.map((log, i) => (
+              <div
+                key={log.id}
+                className="flex items-start justify-between gap-4 py-3 border-b last:border-0"
+                style={{
+                  borderColor: "var(--border-subtle)",
+                  opacity: visible ? 1 : 0,
+                  transform: visible ? "translateY(0)" : "translateY(8px)",
+                  transition: `opacity 280ms ease ${i * 30}ms, transform 280ms ease ${i * 30}ms`,
+                }}
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium" style={{ color: "var(--fg)" }}>
+                    {humanize(log.action)}
+                  </p>
+                  <p className="text-xs mt-0.5 truncate" style={{ color: "var(--muted)" }}>
+                    {log.details}
+                    {log.employee?.name ? ` — ${log.employee.name}` : ""}
+                  </p>
                 </div>
-                <div className="text-[10px] text-[var(--muted)] tech-code whitespace-nowrap">
-                  {new Date(log.timestamp).toLocaleDateString()} {new Date(log.timestamp).toLocaleTimeString()}
-                </div>
+                <span className="text-xs whitespace-nowrap flex-shrink-0 tabular-nums" style={{ color: "var(--muted)" }}>
+                  {timeAgo(log.timestamp)}
+                </span>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

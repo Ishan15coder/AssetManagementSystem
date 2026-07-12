@@ -40,7 +40,7 @@ export default function ReportsAnalytics() {
   const maxBooking = getMaxCount(data.resourceBookings);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-slide-up">
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold tracking-tight mb-1">Reports & Analytics</h1>
