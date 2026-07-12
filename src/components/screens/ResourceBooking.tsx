@@ -31,6 +31,10 @@ export default function ResourceBooking({ user }: ResourceBookingProps) {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Calendar Specific States
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  const [currentCalDate, setCurrentCalDate] = useState(new Date());
+
   const loadResources = async () => {
     try {
       const res = await fetch("/api/assets");
@@ -192,6 +196,42 @@ export default function ResourceBooking({ user }: ResourceBookingProps) {
 
   const selectedAsset = bookableAssets.find((a) => String(a.id) === selectedAssetId);
 
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    return { firstDay, daysInMonth, year, month };
+  };
+
+  const getBookingsForDay = (dayDate: Date) => {
+    return bookings.filter((b) => {
+      const bStart = new Date(b.startDate);
+      const bEnd = new Date(b.endDate);
+      const targetDate = new Date(dayDate);
+      targetDate.setHours(0, 0, 0, 0);
+      bStart.setHours(0, 0, 0, 0);
+      bEnd.setHours(0, 0, 0, 0);
+      return targetDate.getTime() >= bStart.getTime() && targetDate.getTime() <= bEnd.getTime();
+    });
+  };
+
+  const handleDayClick = (dayDate: Date) => {
+    const local = new Date(dayDate.getTime() - dayDate.getTimezoneOffset() * 60000);
+    const dateStr = local.toISOString().split("T")[0];
+    setStartDateStr(dateStr);
+    setEndDateStr(dateStr);
+    setSuccess(`Selected date: ${dateStr} - proceed to configure the form below.`);
+  };
+
+  const nextMonth = () => {
+    setCurrentCalDate(new Date(currentCalDate.getFullYear(), currentCalDate.getMonth() + 1, 1));
+  };
+
+  const prevMonth = () => {
+    setCurrentCalDate(new Date(currentCalDate.getFullYear(), currentCalDate.getMonth() - 1, 1));
+  };
+
   return (
     <div className="space-y-6 animate-slide-up">
       {/* Header */}
@@ -290,74 +330,154 @@ export default function ResourceBooking({ user }: ResourceBookingProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Bookings Timeline Column */}
         <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-xs font-semibold text-(--muted)">Schedule Calendar</h2>
-          <div className="overflow-x-auto border border-(--border) bg-(--surface) rounded-md overflow-hidden">
-            <table className="erp-table min-w-[650px] w-full">
-              <thead>
-                <tr>
-                  <th>Reservee</th>
-                  <th>Start Time</th>
-                  <th>End Time</th>
-                  <th>Status</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bookings.filter((b) => b.status !== "Cancelled").length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="text-center py-4 text-xs text-(--muted)">
-                      No active bookings scheduled for this resource.
-                    </td>
-                  </tr>
-                ) : (
-                  bookings
-                    .filter((b) => b.status !== "Cancelled")
-                    .map((b) => (
-                      <tr key={b.id}>
-                        <td className="font-semibold">{b.employee.name}</td>
-                        <td className="tech-code text-xs">
-                          {new Date(b.startDate).toLocaleDateString()} {new Date(b.startDate).toISOString().substring(11, 16)}
-                        </td>
-                        <td className="tech-code text-xs">
-                          {new Date(b.endDate).toLocaleDateString()} {new Date(b.endDate).toISOString().substring(11, 16)}
-                        </td>
-                        <td>
-                          <span className={`badge ${b.status === "Ongoing" ? "badge-warning" : "badge-success"}`}>
-                            {b.status}
-                          </span>
-                        </td>
-                        <td>
-                          {(user.id === b.employeeId || user.role === "Admin" || user.role === "AssetManager") && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => {
-                                  setReschedulingBooking(b);
-                                  const start = new Date(b.startDate);
-                                  const end = new Date(b.endDate);
-                                  setRescheduleDateStr(start.toISOString().split("T")[0]);
-                                  setRescheduleStartTimeStr(start.toISOString().substring(11, 16));
-                                  setRescheduleEndDateStr(end.toISOString().split("T")[0]);
-                                  setRescheduleEndTimeStr(end.toISOString().substring(11, 16));
-                                }}
-                                className="text-xs text-(--accent) font-semibold hover:underline"
-                              >
-                                Reschedule
-                              </button>
-                              <button
-                                onClick={() => handleCancelBooking(b.id)}
-                                className="text-xs text-(--danger-text) font-semibold hover:underline"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                )}
-              </tbody>
-            </table>
+          <div className="flex justify-between items-center">
+            <h2 className="text-xs font-semibold text-(--muted)">Schedule Calendar</h2>
+            <div className="flex bg-(--surface-2) p-0.5 rounded-md border border-(--border)">
+              <button
+                type="button"
+                onClick={() => setViewMode("list")}
+                className={`px-3 py-1 text-xs font-semibold rounded-sm transition-colors ${viewMode === "list" ? "bg-(--accent) text-white" : "text-(--muted) hover:text-(--fg)"}`}
+              >
+                List View
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("calendar")}
+                className={`px-3 py-1 text-xs font-semibold rounded-sm transition-colors ${viewMode === "calendar" ? "bg-(--accent) text-white" : "text-(--muted) hover:text-(--fg)"}`}
+              >
+                Calendar Grid
+              </button>
+            </div>
           </div>
+
+          {viewMode === "calendar" ? (
+            <div className="erp-card space-y-4">
+              <div className="flex justify-between items-center border-b border-(--border) pb-2">
+                <button type="button" onClick={prevMonth} className="p-1 hover:bg-(--surface-2) rounded-sm text-(--muted) hover:text-(--fg)">
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="text-xs font-bold text-(--fg) uppercase tracking-wider">
+                  {currentCalDate.toLocaleString("en-US", { month: "long", year: "numeric" })}
+                </span>
+                <button type="button" onClick={nextMonth} className="p-1 hover:bg-(--surface-2) rounded-sm text-(--muted) hover:text-(--fg)">
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-7 gap-px bg-(--border) border border-(--border) rounded-sm overflow-hidden text-center text-xs">
+                {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+                  <div key={d} className="bg-(--surface-2) py-2 font-bold text-(--muted)">{d}</div>
+                ))}
+                {(() => {
+                  const { firstDay, daysInMonth, year, month } = getDaysInMonth(currentCalDate);
+                  const cells = [];
+                  for (let i = 0; i < firstDay; i++) {
+                    cells.push(<div key={`empty-${i}`} className="bg-(--surface) p-3 min-h-[70px] border-b border-r border-(--border)" />);
+                  }
+                  for (let d = 1; d <= daysInMonth; d++) {
+                    const dayDate = new Date(year, month, d);
+                    const dayBookings = getBookingsForDay(dayDate);
+                    const isToday = new Date().toDateString() === dayDate.toDateString();
+                    
+                    cells.push(
+                      <div
+                        key={`day-${d}`}
+                        onClick={() => handleDayClick(dayDate)}
+                        className={`bg-(--surface) p-2 min-h-[70px] flex flex-col justify-between items-start cursor-pointer hover:bg-(--surface-2) transition-colors border-b border-r border-(--border) relative group ${isToday ? "border-l-2 border-l-(--accent)" : ""}`}
+                      >
+                        <span className={`text-[10px] font-bold ${isToday ? "text-(--accent)" : "text-(--fg)"}`}>{d}</span>
+                        {dayBookings.length > 0 && (
+                          <div className="w-full space-y-1 mt-1 text-left">
+                            {dayBookings.slice(0, 2).map((b) => (
+                              <div
+                                key={b.id}
+                                className="text-[9px] px-1 py-0.5 rounded-sm bg-blue-950/45 text-blue-300 border border-blue-900 truncate"
+                                title={`${b.employee?.name || "Dept Booking"}: ${new Date(b.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
+                              >
+                                {b.employee?.name || "Booked"}
+                              </div>
+                            ))}
+                            {dayBookings.length > 2 && (
+                              <div className="text-[8px] text-(--muted) font-semibold">+{dayBookings.length - 2} more</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return cells;
+                })()}
+              </div>
+            </div>
+          ) : (
+            <div className="overflow-x-auto border border-(--border) bg-(--surface) rounded-md overflow-hidden">
+              <table className="erp-table min-w-[650px] w-full">
+                <thead>
+                  <tr>
+                    <th>Reservee</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.filter((b) => b.status !== "Cancelled").length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-4 text-xs text-(--muted)">
+                        No active bookings scheduled for this resource.
+                      </td>
+                    </tr>
+                  ) : (
+                    bookings
+                      .filter((b) => b.status !== "Cancelled")
+                      .map((b) => (
+                        <tr key={b.id}>
+                          <td className="font-semibold">{b.employee?.name || "Shared"}</td>
+                          <td className="tech-code text-xs">
+                            {new Date(b.startDate).toLocaleDateString()} {new Date(b.startDate).toISOString().substring(11, 16)}
+                          </td>
+                          <td className="tech-code text-xs">
+                            {new Date(b.endDate).toLocaleDateString()} {new Date(b.endDate).toISOString().substring(11, 16)}
+                          </td>
+                          <td>
+                            <span className={`badge ${b.status === "Ongoing" ? "badge-warning" : "badge-success"}`}>
+                              {b.status}
+                            </span>
+                          </td>
+                          <td>
+                            {(user.id === b.employeeId || user.role === "Admin" || user.role === "AssetManager") && (
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => {
+                                    setReschedulingBooking(b);
+                                    const start = new Date(b.startDate);
+                                    const end = new Date(b.endDate);
+                                    setRescheduleDateStr(start.toISOString().split("T")[0]);
+                                    setRescheduleStartTimeStr(start.toISOString().substring(11, 16));
+                                    setRescheduleEndDateStr(end.toISOString().split("T")[0]);
+                                    setRescheduleEndTimeStr(end.toISOString().substring(11, 16));
+                                  }}
+                                  className="text-xs text-(--accent) font-semibold hover:underline"
+                                >
+                                  Reschedule
+                                </button>
+                                <button
+                                  onClick={() => handleCancelBooking(b.id)}
+                                  className="text-xs text-(--danger-text) font-semibold hover:underline"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Schedule Form Column */}

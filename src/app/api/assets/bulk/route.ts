@@ -70,6 +70,81 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, message: `Deleted ${assetIds.length} assets` });
     }
 
+    if (action === "IMPORT") {
+      const { assets } = body;
+      if (!Array.isArray(assets) || assets.length === 0) {
+        return NextResponse.json({ error: "Assets list required" }, { status: 400 });
+      }
+
+      try {
+        const results = await db.$transaction(async (tx) => {
+          const count = await tx.asset.count();
+          const created = [];
+          
+          for (let i = 0; i < assets.length; i++) {
+            const a = assets[i];
+            
+            if (!a.name) throw new Error(`Asset name required on row ${i + 1}`);
+            if (!a.serialNumber) throw new Error(`Serial number required for "${a.name}" on row ${i + 1}`);
+            
+            const existing = await tx.asset.findUnique({ where: { serialNumber: a.serialNumber } });
+            if (existing) {
+              throw new Error(`Asset with S/N "${a.serialNumber}" already registered (Row ${i + 1})`);
+            }
+
+            let catId = a.categoryId ? parseInt(a.categoryId) : null;
+            if (!catId && a.categoryName) {
+              const existingCat = await tx.assetCategory.findUnique({
+                where: { name: a.categoryName }
+              });
+              if (existingCat) {
+                catId = existingCat.id;
+              } else {
+                const newCat = await tx.assetCategory.create({
+                  data: { name: a.categoryName }
+                });
+                catId = newCat.id;
+              }
+            }
+
+            if (!catId) {
+              throw new Error(`Category mapping failed for row ${i + 1}`);
+            }
+
+            const tag = `AF-${String(count + 1 + i).padStart(4, "0")}`;
+            const createdAsset = await tx.asset.create({
+              data: {
+                tag,
+                name: a.name,
+                serialNumber: a.serialNumber,
+                categoryId: catId,
+                acquisitionDate: a.acquisitionDate ? new Date(a.acquisitionDate) : new Date(),
+                acquisitionCost: parseFloat(a.acquisitionCost || "0"),
+                condition: a.condition || "Good",
+                location: a.location || "HQ",
+                isBookable: a.isBookable === true || String(a.isBookable).toLowerCase() === "true" || String(a.isBookable).toLowerCase() === "yes",
+                status: "Available",
+              }
+            });
+            created.push(createdAsset);
+          }
+
+          const logs = created.map((asset) => ({
+            employeeId: user.id,
+            action: "RegisterAsset",
+            details: `Imported asset: ${asset.name} (Tag: ${asset.tag}, S/N: ${asset.serialNumber}) via CSV`,
+          }));
+          await tx.activityLog.createMany({ data: logs });
+
+          return created;
+        });
+
+        return NextResponse.json({ success: true, message: `Successfully imported ${results.length} assets` });
+      } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+    }
+
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error: any) {
     console.error("POST /api/assets/bulk error:", error);

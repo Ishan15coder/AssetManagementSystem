@@ -35,6 +35,14 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
   const [loading, setLoading]       = useState(true);
   const [visible, setVisible]       = useState(false);
 
+  // Scanner Simulator States
+  const [showScanner, setShowScanner] = useState(false);
+  const [assets, setAssets] = useState<any[]>([]);
+  const [scannedAsset, setScannedAsset] = useState<any | null>(null);
+  const [scannerActionMsg, setScannerActionMsg] = useState("");
+  const [scannerErrorMsg, setScannerErrorMsg] = useState("");
+  const [scannerLoading, setScannerLoading] = useState(false);
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -90,6 +98,7 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
         }
         setOverdueItems(overdue);
         setRecentLogs((rl.logs ?? []).slice(0, 8));
+        setAssets(ra.assets || []);
       } catch { /* silent */ } finally {
         setLoading(false);
         setTimeout(() => setVisible(true), 60);
@@ -97,6 +106,85 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
     };
     load();
   }, []);
+
+  const handleQuickReturn = async (assetId: number) => {
+    setScannerLoading(true);
+    setScannerActionMsg("");
+    setScannerErrorMsg("");
+    try {
+      const res = await fetch(`/api/allocations/${assetId}/return`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ conditionOnCheckIn: "Good - returned via Scanner Simulator" })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to return asset");
+      
+      setScannerActionMsg("Asset successfully returned! Status updated to Available.");
+      setScannedAsset((prev: any) => prev ? { ...prev, status: "Available" } : null);
+      
+      // Refresh database stats
+      const [rr, ra] = await Promise.all([
+        fetch("/api/reports").then(r => r.json()),
+        fetch("/api/assets").then(r => r.json())
+      ]);
+      setAssets(ra.assets || []);
+      const sc = rr.statusCounts ?? [];
+      const count = (status: string) => Number(sc.find((s: any) => s.status === status)?._count?.id ?? sc.find((s: any) => s.status === status)?.count ?? 0);
+      setStatusData(sc.map((s: any) => ({ name: s.status, value: Number(s._count?.id ?? s.count ?? 0) })).filter((s:any) => s.value > 0));
+      setStats((prev: any) => ({
+        ...prev,
+        available: count("Available"),
+        allocated: count("Allocated"),
+      }));
+    } catch (err: any) {
+      setScannerErrorMsg(err.message);
+    } finally {
+      setScannerLoading(false);
+    }
+  };
+
+  const handleQuickMaintenance = async (assetId: number) => {
+    setScannerLoading(true);
+    setScannerActionMsg("");
+    setScannerErrorMsg("");
+    try {
+      const res = await fetch("/api/maintenance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          assetId,
+          description: "Reported via Scanner Simulator",
+          priority: "Medium"
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to log maintenance request");
+      
+      setScannerActionMsg("Maintenance request logged successfully! Asset status is now Under Maintenance.");
+      setScannedAsset((prev: any) => prev ? { ...prev, status: "UnderMaintenance" } : null);
+      
+      // Refresh database stats
+      const [rr, ra] = await Promise.all([
+        fetch("/api/reports").then(r => r.json()),
+        fetch("/api/assets").then(r => r.json())
+      ]);
+      setAssets(ra.assets || []);
+      const sc = rr.statusCounts ?? [];
+      const count = (status: string) => Number(sc.find((s: any) => s.status === status)?._count?.id ?? sc.find((s: any) => s.status === status)?.count ?? 0);
+      setStatusData(sc.map((s: any) => ({ name: s.status, value: Number(s._count?.id ?? s.count ?? 0) })).filter((s:any) => s.value > 0));
+      setStats((prev: any) => ({
+        ...prev,
+        available: count("Available"),
+        allocated: count("Allocated"),
+        maintenance: count("UnderMaintenance"),
+      }));
+    } catch (err: any) {
+      setScannerErrorMsg(err.message);
+    } finally {
+      setScannerLoading(false);
+    }
+  };
 
   const humanizeAction = (a: string) =>
     a.replace(/([A-Z])/g, " $1").trim().toLowerCase().replace(/^./, s => s.toUpperCase());
@@ -196,6 +284,9 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
             Register asset
           </button>
         )}
+        <button onClick={() => { setShowScanner(true); setScannedAsset(null); setScannerActionMsg(""); setScannerErrorMsg(""); }} className="erp-btn-secondary text-(--accent) border-(--accent) w-full sm:w-auto flex items-center justify-center gap-1.5 font-bold">
+          Scan QR Code
+        </button>
         <button onClick={() => setActiveScreen("bookings")}    className="erp-btn-secondary w-full sm:w-auto">Book a resource</button>
         <button onClick={() => setActiveScreen("maintenance")} className="erp-btn-secondary w-full sm:w-auto">Raise maintenance ticket</button>
         {user.role === "Admin" && (
@@ -325,6 +416,174 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
           </div>
         )}
       </div>
+
+      {/* QR Code Scanner Simulator Modal */}
+      {showScanner && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-400 flex items-center justify-center p-4">
+          <div className="erp-card w-full max-w-md space-y-4">
+            <div className="flex justify-between items-center border-b border-(--border) pb-2">
+              <h3 className="text-sm font-semibold text-(--fg)">Scan Asset QR Code</h3>
+              <button
+                onClick={() => {
+                  setShowScanner(false);
+                  setScannedAsset(null);
+                  setScannerActionMsg("");
+                  setScannerErrorMsg("");
+                }}
+                className="text-xs text-(--muted) hover:text-(--foreground)"
+              >
+                Close
+              </button>
+            </div>
+
+            {/* Stylized Scanner Frame */}
+            {!scannedAsset && (
+              <div className="relative border border-(--border) h-48 bg-black rounded-sm flex flex-col items-center justify-center overflow-hidden">
+                {/* Viewfinder brackets */}
+                <div className="absolute top-4 left-4 h-4 w-4 border-t-2 border-l-2 border-emerald-500"></div>
+                <div className="absolute top-4 right-4 h-4 w-4 border-t-2 border-r-2 border-emerald-500"></div>
+                <div className="absolute bottom-4 left-4 h-4 w-4 border-b-2 border-l-2 border-emerald-500"></div>
+                <div className="absolute bottom-4 right-4 h-4 w-4 border-b-2 border-r-2 border-emerald-500"></div>
+                
+                {/* Laser animation line */}
+                <div className="absolute left-0 w-full h-0.5 bg-emerald-500/80 shadow-[0_0_8px_#10b981] animate-[pulse_1.5s_infinite]" style={{ top: '50%' }}></div>
+                
+                <span className="text-[10px] text-emerald-500 font-bold uppercase tracking-widest animate-pulse">Waiting for scan target...</span>
+              </div>
+            )}
+
+            {scannerErrorMsg && (
+              <div className="p-3 text-xs font-semibold border border-red-950/20 bg-red-950/10 text-(--danger-text) rounded-sm">
+                {scannerErrorMsg}
+              </div>
+            )}
+            {scannerActionMsg && (
+              <div className="p-3 text-xs font-semibold border border-emerald-950/20 bg-emerald-950/10 text-(--success-text) rounded-sm">
+                {scannerActionMsg}
+              </div>
+            )}
+
+            {!scannedAsset ? (
+              <div className="space-y-4">
+                <div className="flex flex-col space-y-1">
+                  <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Select Registered Asset to Simulate Scanning</label>
+                  <select
+                    onChange={(e) => {
+                      const matched = assets.find((a) => String(a.id) === e.target.value);
+                      if (matched) {
+                        setScannedAsset(matched);
+                        setScannerActionMsg("");
+                        setScannerErrorMsg("");
+                      }
+                    }}
+                    className="erp-input text-xs"
+                    defaultValue=""
+                  >
+                    <option value="" disabled>Choose Asset...</option>
+                    {assets.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name} ({a.tag}) - {a.status}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="border border-(--border) p-3 bg-(--surface-2) rounded-sm space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-(--muted)">Asset Name:</span>
+                    <span className="font-bold text-(--fg)">{scannedAsset.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-(--muted)">Asset Tag:</span>
+                    <span className="font-mono font-bold text-(--accent)">{scannedAsset.tag}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-(--muted)">Location:</span>
+                    <span className="font-semibold text-(--fg)">{scannedAsset.location}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-(--muted)">Current Status:</span>
+                    <span className={`badge ${scannedAsset.status === "Available" ? "badge-success" : scannedAsset.status === "UnderMaintenance" ? "badge-warning" : "badge-danger"}`}>
+                      {scannedAsset.status}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <span className="text-[10px] font-bold text-(--muted) uppercase tracking-wider block">Contextual Quick Actions</span>
+                  
+                  {scannedAsset.status === "Available" && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowScanner(false);
+                          setActiveScreen("assets");
+                        }}
+                        className="erp-btn-primary text-xs"
+                      >
+                        Allocate Asset
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowScanner(false);
+                          setActiveScreen("bookings");
+                        }}
+                        className="erp-btn-secondary text-xs"
+                      >
+                        Book Time Slot
+                      </button>
+                    </div>
+                  )}
+
+                  {scannedAsset.status === "Allocated" && (
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleQuickReturn(scannedAsset.id)}
+                        disabled={scannerLoading}
+                        className="erp-btn-primary text-xs"
+                      >
+                        {scannerLoading ? "Processing..." : "Quick Return (Check-in)"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowScanner(false);
+                          setActiveScreen("assets");
+                        }}
+                        className="erp-btn-secondary text-xs"
+                      >
+                        Request Transfer
+                      </button>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => handleQuickMaintenance(scannedAsset.id)}
+                    disabled={scannerLoading || scannedAsset.status === "UnderMaintenance"}
+                    className="erp-btn-secondary text-xs w-full text-(--warning-text) border-(--warning-text)"
+                  >
+                    {scannerLoading ? "Processing..." : scannedAsset.status === "UnderMaintenance" ? "Under Maintenance" : "Raise Repair / Maintenance Ticket"}
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setScannedAsset(null)}
+                  className="w-full text-xs font-semibold text-(--muted) hover:text-(--fg) py-1 underline block text-center"
+                >
+                  Scan Another Asset
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

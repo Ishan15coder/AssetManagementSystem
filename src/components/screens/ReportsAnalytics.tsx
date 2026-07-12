@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { CustomSelect } from "@/components/ui/CustomSelect";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, BarChart, Bar, CartesianGrid, XAxis, YAxis, Tooltip, AreaChart, Area, LineChart, Line, ScatterChart, Scatter, ZAxis, Legend } from "recharts";
 
 const COLORS = {
@@ -28,13 +29,27 @@ export default function ReportsAnalytics() {
     totalPortfolioValue: 0,
   });
   const [loading, setLoading] = useState(true);
+  
+  // Interactive Depreciation States
+  const [assets, setAssets] = useState<any[]>([]);
+  const [selectedAssetId, setSelectedAssetId] = useState<string>("");
+  const [salvageRate, setSalvageRate] = useState<number>(10);
+  const [usefulLife, setUsefulLife] = useState<number>(5);
 
   useEffect(() => {
     const loadReports = async () => {
       try {
-        const res = await fetch("/api/reports");
-        const resData = await res.json();
+        const [repRes, astRes] = await Promise.all([
+          fetch("/api/reports"),
+          fetch("/api/assets?limit=100")
+        ]);
+        const resData = await repRes.json();
+        const astData = await astRes.json();
         setData(resData);
+        setAssets(astData.assets || []);
+        if (astData.assets && astData.assets.length > 0) {
+          setSelectedAssetId(String(astData.assets[0].id));
+        }
       } catch (err) {
         console.error(err);
       } finally {
@@ -72,6 +87,35 @@ export default function ReportsAnalytics() {
   const maxBooking = data.resourceBookings.length > 0 ? Math.max(...data.resourceBookings.map((item: any) => item.count)) : 1;
   const maxUsedCount = data.mostUsed.length > 0 ? Math.max(...data.mostUsed.map((item: any) => item.count)) : 1;
   const maxHeatmapCount = data.heatmap.length > 0 ? Math.max(...data.heatmap.map((item: any) => item.count)) : 1;
+
+  // Calculate Straight Line Depreciation Schedule for the Selected Asset
+  const selectedAsset = assets.find((a) => String(a.id) === selectedAssetId);
+  const cost = selectedAsset ? selectedAsset.acquisitionCost : 0;
+  const salvageValue = cost * (salvageRate / 100);
+  const depreciableAmount = cost - salvageValue;
+  const annualDepreciation = usefulLife > 0 ? depreciableAmount / usefulLife : 0;
+
+  const depreciationSchedule: any[] = [];
+  let currentBookValue = cost;
+  let accumDep = 0;
+  
+  depreciationSchedule.push({
+    year: "Acquired",
+    depreciation: 0,
+    accumulated: 0,
+    bookValue: cost
+  });
+
+  for (let year = 1; year <= usefulLife; year++) {
+    accumDep += annualDepreciation;
+    currentBookValue -= annualDepreciation;
+    depreciationSchedule.push({
+      year: `Yr ${year}`,
+      depreciation: annualDepreciation,
+      accumulated: accumDep,
+      bookValue: Math.max(currentBookValue, salvageValue)
+    });
+  }
 
   return (
     <div className="space-y-6 animate-slide-up">
@@ -548,6 +592,123 @@ export default function ReportsAnalytics() {
               })()}
             </div>
           </div>
+        </div>
+
+        {/* Interactive Asset Depreciation Calculator */}
+        <div className="erp-card space-y-4 md:col-span-2">
+          <div className="flex justify-between items-center border-b border-(--border) pb-2">
+            <h2 className="text-sm font-semibold text-(--fg)">Interactive Asset Depreciation Calculator</h2>
+            <span className="text-[10px] uppercase font-bold text-(--muted)">Straight-Line Valuation</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="space-y-4">
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Select Asset</label>
+                <CustomSelect
+                  value={selectedAssetId}
+                  onChange={setSelectedAssetId}
+                  options={assets.map((a) => ({
+                    value: String(a.id),
+                    label: `${a.name} (${a.tag})`,
+                  }))}
+                />
+              </div>
+
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Useful Lifespan (Years): {usefulLife}</label>
+                <input
+                  type="range"
+                  min="1"
+                  max="15"
+                  value={usefulLife}
+                  onChange={(e) => setUsefulLife(parseInt(e.target.value))}
+                  className="w-full accent-(--accent)"
+                />
+              </div>
+
+              <div className="flex flex-col space-y-1">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Salvage Value (%): {salvageRate}%</label>
+                <input
+                  type="range"
+                  min="0"
+                  max="50"
+                  step="5"
+                  value={salvageRate}
+                  onChange={(e) => setSalvageRate(parseInt(e.target.value))}
+                  className="w-full accent-(--accent)"
+                />
+              </div>
+
+              {selectedAsset && (
+                <div className="border border-(--border) p-3 bg-(--surface-2) space-y-1 rounded-sm text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-(--muted)">Acquisition Cost:</span>
+                    <span className="font-bold text-(--fg)">₹{cost.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-(--muted)">Salvage Value:</span>
+                    <span className="font-bold text-(--fg)">₹{salvageValue.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-(--muted)">Annual Depr:</span>
+                    <span className="font-bold text-(--danger-text)">-₹{annualDepreciation.toLocaleString("en-IN", { maximumFractionDigits: 0 })}/yr</span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="h-64 w-full md:col-span-2">
+              <span className="text-[10px] font-bold text-(--muted) uppercase tracking-wider mb-2 block">Depreciation Chart Projection</span>
+              {selectedAsset ? (
+                <ResponsiveContainer width="100%" height="85%">
+                  <AreaChart data={depreciationSchedule} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--accent)" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="var(--accent)" stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                    <XAxis dataKey="year" stroke="var(--muted)" fontSize={10} />
+                    <YAxis stroke="var(--muted)" fontSize={10} tickFormatter={(val) => `₹${(val).toLocaleString("en-IN")}`} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "var(--surface)", borderColor: "var(--border)", color: "var(--fg)", fontSize: "12px", borderRadius: "8px" }}
+                      formatter={(val: any) => [`₹${Math.round(val).toLocaleString("en-IN")}`, 'Remaining Book Value']}
+                    />
+                    <Area type="monotone" dataKey="bookValue" stroke="var(--accent)" strokeWidth={2.5} fillOpacity={1} fill="url(#colorVal)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-xs text-(--muted)">No asset selected for simulation.</p>
+              )}
+            </div>
+          </div>
+          
+          {selectedAsset && (
+            <div className="overflow-x-auto border border-(--border) rounded-sm bg-(--background) mt-4">
+              <table className="erp-table w-full text-xs">
+                <thead>
+                  <tr>
+                    <th>Year</th>
+                    <th>Annual Depreciation</th>
+                    <th>Accumulated Depreciation</th>
+                    <th>Ending Book Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {depreciationSchedule.map((row, i) => (
+                    <tr key={i}>
+                      <td className="font-semibold">{row.year}</td>
+                      <td className="tabular-nums">₹{row.depreciation.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</td>
+                      <td className="tabular-nums">₹{row.accumulated.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</td>
+                      <td className="tabular-nums font-bold text-(--success-text)">₹{row.bookValue.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* 5-Year Depreciation Projection */}

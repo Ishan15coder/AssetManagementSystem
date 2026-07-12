@@ -31,6 +31,11 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
   const [photoUrl, setPhotoUrl] = useState("");
   const [documentUrl, setDocumentUrl] = useState("");
   const [showRegForm, setShowRegForm] = useState(false);
+  
+  // CSV Import States
+  const [showImportForm, setShowImportForm] = useState(false);
+  const [csvText, setCsvText] = useState("");
+  const [importError, setImportError] = useState("");
 
   // Search/Filters
   const [searchVal, setSearchVal] = useState("");
@@ -251,6 +256,90 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target?.result as string;
+      setCsvText(text);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleCSVImportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setImportError("");
+    setSuccess("");
+    if (!csvText.trim()) {
+      setImportError("Please provide CSV data.");
+      return;
+    }
+
+    const lines = csvText.split(/\r?\n/);
+    if (lines.length <= 1) {
+      setImportError("CSV must contain a header row and at least one data row.");
+      return;
+    }
+
+    const headers = lines[0].split(",").map(h => h.trim().replace(/^["']|["']$/g, ''));
+    
+    // Validate required headers
+    const required = ["Name", "SerialNumber", "CategoryName"];
+    const missing = required.filter(r => !headers.includes(r));
+    if (missing.length > 0) {
+      setImportError(`Missing required headers: ${missing.join(", ")}. Expected format: Name,SerialNumber,CategoryName,AcquisitionCost,Condition,Location,IsBookable`);
+      return;
+    }
+
+    const parsedAssets = [];
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      const values = line.split(",").map(v => v.trim().replace(/^["']|["']$/g, ''));
+      if (values.length !== headers.length) {
+        setImportError(`Row ${i + 1} has column count mismatch (expected ${headers.length}, got ${values.length}).`);
+        return;
+      }
+
+      const obj: any = {};
+      headers.forEach((header, index) => {
+        obj[header] = values[index];
+      });
+
+      parsedAssets.push({
+        name: obj.Name,
+        serialNumber: obj.SerialNumber,
+        categoryName: obj.CategoryName,
+        acquisitionCost: parseFloat(obj.AcquisitionCost || "0"),
+        acquisitionDate: obj.AcquisitionDate ? new Date(obj.AcquisitionDate).toISOString() : new Date().toISOString(),
+        condition: obj.Condition || "Good",
+        location: obj.Location || "HQ Office",
+        isBookable: obj.IsBookable === "true" || obj.IsBookable === "Yes" || obj.IsBookable === "1",
+      });
+    }
+
+    try {
+      setLoading(true);
+      const res = await fetch("/api/assets/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "IMPORT", assets: parsedAssets }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Bulk import failed");
+      
+      setSuccess(`Imported ${parsedAssets.length} assets successfully.`);
+      setShowImportForm(false);
+      setCsvText("");
+      loadAssets(1);
+    } catch (err: any) {
+      setImportError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleExportCSV = () => {
     const formatted = assets.map(a => ({
       Tag: a.tag,
@@ -304,6 +393,11 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
           <p className="text-base text-(--muted)">Register, search, and audit corporate physical inventory and active lifecycles.</p>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
+          {canRegister && (
+            <button onClick={() => setShowImportForm(true)} className="erp-btn-secondary text-xs">
+              Import CSV
+            </button>
+          )}
           <button onClick={handleExportCSV} className="erp-btn-secondary text-xs">
             Export CSV
           </button>
@@ -404,6 +498,64 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
               </ResponsiveContainer>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* CSV Import Form Panel */}
+      {showImportForm && (
+        <div className="erp-card space-y-4">
+          <div className="flex justify-between items-center border-b border-(--border) pb-2">
+            <h3 className="text-sm font-semibold text-(--fg)">Bulk Import Assets via CSV</h3>
+            <button onClick={() => setShowImportForm(false)} className="text-xs text-(--muted) hover:text-(--foreground)">
+              Cancel
+            </button>
+          </div>
+
+          <form onSubmit={handleCSVImportSubmit} className="space-y-4">
+            {importError && (
+              <div className="p-3 text-xs font-medium border border-red-950/20 bg-red-950/10 text-(--danger-text)">
+                {importError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col space-y-2">
+                <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">Upload CSV File</label>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileChange}
+                  className="erp-input text-xs"
+                />
+              </div>
+
+              <div className="flex flex-col space-y-1">
+                <span className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider block">CSV Template Reference</span>
+                <span className="text-[11px] text-(--muted) block">
+                  Format: <code>Name,SerialNumber,CategoryName,AcquisitionCost,Condition,Location,IsBookable</code>
+                </span>
+                <span className="text-[10px] text-(--accent) block font-mono bg-(--surface) p-1 border border-(--border) rounded-sm select-all">
+                  ThinkPad L14,SN-998822,Laptops,1200,Good,Office A,No
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col space-y-1">
+              <label className="text-[10px] font-semibold text-(--muted) uppercase tracking-wider">CSV Raw Data</label>
+              <textarea
+                required
+                rows={6}
+                value={csvText}
+                onChange={(e) => setCsvText(e.target.value)}
+                className="erp-input font-mono text-xs"
+                placeholder="Paste CSV rows here (including header)..."
+              />
+            </div>
+
+            <button type="submit" disabled={loading} className="erp-btn-primary w-full">
+              {loading ? "Importing..." : "Process and Import Assets"}
+            </button>
+          </form>
         </div>
       )}
 
