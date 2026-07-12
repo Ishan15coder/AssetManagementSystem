@@ -1,6 +1,6 @@
 # AssetFlow — Enterprise Asset & Resource Management System
 
-> A centralized ERP platform that helps organizations track, allocate, audit, and maintain their physical assets and shared resources — all in one place.
+> A centralized ERP platform built with Next.js, Prisma, and React to help organizations track, allocate, audit, and maintain their physical assets and shared resources.
 
 ---
 
@@ -35,7 +35,7 @@ Signup creates an Employee account — no role selection at registration. Admins
 
 - Email/password login with JWT-based session management
 - Forgot password flow
-- All authorization enforced server-side — the client never declares its own role
+- All authorization enforced server-side via Next.js Route Handlers and Server Actions
 
 ### Dashboard & KPI Overview
 
@@ -143,7 +143,7 @@ A complete record of everything that happens in the system:
 
 Enterprise software requires strict business rules. AssetFlow handles several critical edge cases out-of-the-box:
 
-- **The Double-Allocation Shield**: If two managers try to allocate the same physical asset (e.g., a specific vehicle) at the exact same time, the system uses concurrency locking to resolve the first request and gracefully rejects the second with a clear conflict status.
+- **The Double-Allocation Shield**: If two managers try to allocate the same physical asset (e.g., a specific vehicle) at the exact same time, the server uses concurrency-safe transactions to resolve the first request and gracefully rejects the second with a clear conflict status.
 - **State-Transition Integrity**: An asset marked as `Disposed` or `Retired` can never be transitioned back to `Allocated` or `Available`. This prevents security and accounting fraud.
 - **Booking Overlaps Down to the Millisecond**: Booking time-slot checks use non-inclusive boundaries. A booking ending at `10:00` allows the next booking to start exactly at `10:00` without triggering a false conflict.
 - **Safe Auditing Loop**: When an audit cycle is closed, the system only updates assets to `Lost` if they were explicitly flagged as `Missing`. It preserves histories and prevents bulk corruption.
@@ -154,10 +154,10 @@ Enterprise software requires strict business rules. AssetFlow handles several cr
 
 AssetFlow is architected with a security-first approach to protect sensitive organizational rosters and asset histories:
 
-- **JWT Role Enforcement**: Decoding and authorization happen entirely on the server. If a client attempts to bypass the UI to call `/api/employees/:id/promote` or access Admin-only pages, the request is rejected with a `403 Forbidden` response.
+- **JWT Role Enforcement**: Decoding and authorization happen entirely on the server. If a client attempts to bypass the UI to call backend promotion APIs or access Admin-only pages, Next.js Middleware and Server Actions reject the request with a `403 Forbidden` response.
 - **Cryptographic Protections**: All employee passwords are salted and hashed using `bcryptjs` before storage. Plain-text passwords never touch the database.
 - **Immutable Log Trails**: High-privilege actions (like role promotions, asset disposals, and audit lockouts) are logged to an append-only log in the database that cannot be modified or cleared via standard API endpoints.
-- **Input Sanitization**: All incoming data parameters are strictly validated using `express-validator` to prevent script injections and malformed payloads.
+- **Input Sanitization**: All incoming parameters are validated using `zod` schema verification to prevent script injections and malformed payloads.
 
 ---
 
@@ -211,29 +211,29 @@ erDiagram
 ```
                ┌─────────────────────────────────────────┐
                │            Browser Frontend             │
-               │      (Vanilla HTML5, CSS3, JS ES6)      │
+               │     (Next.js React Client Components)   │
                └─────────────────────────────────────────┘
                                     │
-                                    │  fetch() with JWT Authorization Header
+                                    │  API Requests / Server Actions
                                     ▼
                ┌─────────────────────────────────────────┐
-               │        Express REST Server (:3000)      │
+               │          Next.js Server & APIs          │
+               │   Route Handlers · Server Components    │
                └──────────┬────────────────┬─────────────┘
                           │                │
-               [Auth Middleware]   [Route Handlers + Input Validation]
-               Verify JWT &         Conflict guards, state machine,
-               decode role          overlap checks, audit logic
+               [JWT Auth Helper]   [Zod Schemas + Middlewares]
+               Verify tokens &     Validate inputs & permissions
+               extract user roles
                           │                │
                           └────────┬───────┘
                                    │
                ┌─────────────────────────────────────────┐
-               │            DB Controller (db.js)        │
-               │   Concurrency queue · State validation  │
-               │   Allocation conflict engine            │
+               │            Prisma ORM Client            │
+               │        Transaction & State Guards       │
                └─────────────────────────────────────────┘
                                    │
                ┌─────────────────────────────────────────┐
-               │           File Database (db.json)       │
+               │          Database (SQLite/Postgres)     │
                └─────────────────────────────────────────┘
 ```
 
@@ -243,12 +243,14 @@ erDiagram
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | Vanilla HTML5, CSS3, JavaScript (ES6+), Chart.js for analytics |
-| **Backend** | Node.js, Express.js |
+| **Framework** | Next.js (App Router, React Server Components, Server Actions) |
+| **Language** | TypeScript / JavaScript ES6+ |
+| **Database ORM** | Prisma ORM |
+| **Database** | SQLite (for simple, file-based setup) or PostgreSQL (for production) |
 | **Auth & Security** | `jsonwebtoken`, `bcryptjs` |
-| **File Uploads** | `multer` |
-| **Validation** | `express-validator` |
-| **Concurrency** | `proper-lockfile` / promise-based write queue for safe concurrent `db.json` writes |
+| **Validation** | `zod` schema validation |
+| **Styling** | Tailwind CSS (Modern dark-mode, glassmorphism, responsive grid) |
+| **Charts** | Chart.js or Recharts |
 
 ---
 
@@ -256,15 +258,19 @@ erDiagram
 
 ```
 AssetManagementSystem/
-├── server.js           # Express application entry point & middleware registration
-├── db.js               # JSON DB controller, concurrency queue, state transition guards
-├── db.json             # Pre-seeded JSON database (users, assets, bookings, logs, etc.)
-├── package.json        # Dependencies and npm scripts
-├── public/
-│   ├── index.html      # Single Page Application shell
-│   ├── style.css       # Design system — dark mode, glassmorphism, responsive grid
-│   └── app.js          # Lightweight SPA router, API wrapper, and view logic
-└── uploads/            # Asset images and maintenance report attachments
+├── prisma/
+│   └── schema.prisma   # Prisma schema file mapping tables and relations
+├── src/
+│   ├── app/            # App router pages, layouts, and api handlers
+│   │   ├── api/        # Next.js API route handlers
+│   │   ├── layout.tsx  # Application layout shell
+│   │   └── page.tsx    # Dashboard & route controller
+│   ├── components/     # Reusable UI component library (sidebar, charts, cards)
+│   ├── lib/            # Server utilities (Prisma client, JWT token operations, validation)
+│   └── types/          # Shared typescript interfaces
+├── package.json        # Dependencies and dev scripts
+├── tailwind.config.ts  # Tailwind style rules and design system colors
+└── tsconfig.json       # TypeScript configuration
 ```
 
 ---
@@ -273,8 +279,8 @@ AssetManagementSystem/
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) v16 or later
-- npm v7 or later
+- [Node.js](https://nodejs.org/) v18.17 or later
+- npm v9 or later
 
 ### 1. Clone and Install
 
@@ -284,24 +290,25 @@ cd AssetManagementSystem
 npm install
 ```
 
-### 2. First Run
+### 2. Set Up Database
 
-On first boot, `server.js` automatically creates and seeds `db.json` with:
+Run the database schema setup using Prisma (generates a local SQLite file automatically):
 
-- 10+ pre-populated assets across categories (IT equipment, vehicles, conference rooms)
-- 6 demo users with pre-configured roles
-- Historical data — completed bookings, active maintenance logs, past activity records
+```bash
+npx prisma db push
+```
+
+To view or edit the database directly through a GUI:
+```bash
+npx prisma studio
+```
 
 ### 3. Start the Server
 
-Development (with hot-reload):
+Start the development server with hot-reloading:
+
 ```bash
 npm run dev
-```
-
-Standard:
-```bash
-npm start
 ```
 
 Open **`http://localhost:3000`** in your browser.
@@ -310,7 +317,7 @@ Open **`http://localhost:3000`** in your browser.
 
 ## Demo Accounts
 
-A role switcher in the UI lets you jump between accounts without re-entering credentials. Each click makes a real `/api/auth/login` request — nothing is bypassed.
+A role switcher in the UI lets you jump between accounts without re-entering credentials. Each click makes a real authentication request — nothing is bypassed.
 
 | Name | Role | Email | Password |
 |---|---|---|---|
