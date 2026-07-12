@@ -372,11 +372,11 @@ A role switcher in the UI lets you jump between accounts without re-entering cre
 
 | Name | Role | Email | Password |
 |---|---|---|---|
-| Sarah Jenkins | Admin | `admin@assetflow.com` | `Demo@123` |
-| Marcus Vance | Asset Manager | `manager@assetflow.com` | `Demo@123` |
-| Elena Rostova | Department Head (IT) | `elena.it@assetflow.com` | `Demo@123` |
-| David Kim | Employee | `david@assetflow.com` | `Demo@123` |
-| Priya Patel | Employee | `priya@assetflow.com` | `Demo@123` |
+| Amit Admin | Admin | `admin@assetflow.com` | `password123` |
+| Vivaan Patel | Asset Manager | `manager@assetflow.com` | `password123` |
+| Aditya Singh | Department Head (IT) | `elena.it@assetflow.com` | `password123` |
+| Aadhya Joshi | Employee | `david@assetflow.com` | `password123` |
+| Vihaan Gupta | Employee | `priya@assetflow.com` | `password123` |
 
 ---
 
