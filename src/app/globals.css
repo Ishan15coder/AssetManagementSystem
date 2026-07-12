@@ -1,0 +1,173 @@
+@import "tailwindcss";
+
+:root {
+  /* Flat, high-density dark ERP theme color variables in OKLCH */
+  --background: oklch(10% 0 0);          /* Deep dark zinc background (#09090b) */
+  --surface: oklch(15% 0 0);             /* Solid dark charcoal panel surface (#121214) */
+  --border: oklch(25% 0 0);              /* Sharp 1px border (#27272a) */
+  
+  --foreground: oklch(98% 0 0);          /* Crisp off-white (#fafafa) */
+  --muted: oklch(70% 0 0);               /* Mid-tone gray (#a1a1aa) */
+  --accent: oklch(100% 0 0);             /* Solid white highlight (#ffffff) */
+  --accent-hover: oklch(90% 0 0);       /* Slight gray for hover states */
+
+  /* State colors (text and subtle background tints) */
+  --success-text: oklch(62% 0.16 150);
+  --success-bg: oklch(20% 0.05 150 / 20%);
+
+  --warning-text: oklch(75% 0.15 75);
+  --warning-bg: oklch(22% 0.05 75 / 20%);
+
+  --danger-text: oklch(60% 0.18 28);
+  --danger-bg: oklch(18% 0.06 28 / 20%);
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+
+  --color-success-text: var(--success-text);
+  --color-success-bg: var(--success-bg);
+  --color-warning-text: var(--warning-text);
+  --color-warning-bg: var(--warning-bg);
+  --color-danger-text: var(--danger-text);
+  --color-danger-bg: var(--danger-bg);
+
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", Menlo, Monaco, Consolas, monospace;
+}
+
+/* Base resets & high-density layout guidelines */
+html,
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Modern flat high-density table overrides */
+.erp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
+
+.erp-table th {
+  font-weight: 500;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-family: var(--font-sans);
+}
+
+.erp-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  font-family: var(--font-sans);
+}
+
+/* Technical text styling for tags and codes */
+.tech-code {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: -0.02em;
+}
+
+/* Crisp 1px solid card containers */
+.erp-card {
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 1.25rem;
+}
+
+/* Input fields overrides */
+.erp-input {
+  background-color: var(--background);
+  border: 1px solid var(--border);
+  color: var(--foreground);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border-radius: 0;
+  outline: none;
+  font-family: var(--font-sans);
+}
+
+.erp-input:focus {
+  border-color: var(--accent);
+}
+
+/* Buttons overrides */
+.erp-btn-primary {
+  background-color: var(--accent);
+  color: var(--background);
+  font-weight: 500;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border-radius: 0;
+  cursor: pointer;
+  border: 1px solid var(--accent);
+  transition: background-color 0.15s ease;
+}
+
+.erp-btn-primary:hover {
+  background-color: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.erp-btn-secondary {
+  background-color: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  font-weight: 500;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.erp-btn-secondary:hover {
+  background-color: var(--surface);
+}
+
+/* State badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0;
+}
+
+.badge-success {
+  color: var(--success-text);
+  background-color: var(--success-bg);
+  border: 1px solid oklch(from var(--success-text) l c h / 20%);
+}
+
+.badge-warning {
+  color: var(--warning-text);
+  background-color: var(--warning-bg);
+  border: 1px solid oklch(from var(--warning-text) l c h / 20%);
+}
+
+.badge-danger {
+  color: var(--danger-text);
+  background-color: var(--danger-bg);
+  border: 1px solid oklch(from var(--danger-text) l c h / 20%);
+}

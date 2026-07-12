@@ -1,0 +1,163 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Employee {
+  id                Int                @id @default(autoincrement())
+  name              String
+  email             String             @unique
+  password          String
+  role              String             @default("Employee") // Admin, Manager, DeptHead, Employee
+  status            String             @default("Active")   // Active, Inactive
+  departmentId      Int?
+  department        Department?        @relation("DepartmentEmployees", fields: [departmentId], references: [id])
+  
+  // Relations
+  managedDepartment Department?        @relation("DepartmentHead")
+  allocations       Allocation[]
+  bookings          ResourceBooking[]
+  auditCycles       AuditCycle[]
+  transfersFrom     TransferRequest[]  @relation("TransferFrom")
+  transfersTo       TransferRequest[]  @relation("TransferTo")
+  approvedTransfers TransferRequest[]  @relation("ApprovedBy")
+  maintenance       MaintenanceRequest[]
+  activityLogs      ActivityLog[]
+
+  @@index([email])
+}
+
+model Department {
+  id           Int          @id @default(autoincrement())
+  name         String       @unique
+  status       String       @default("Active") // Active, Inactive
+  headId       Int?         @unique
+  head         Employee?    @relation("DepartmentHead", fields: [headId], references: [id])
+  
+  parentId     Int?
+  parent       Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id])
+  children     Department[] @relation("DepartmentHierarchy")
+  
+  employees    Employee[]   @relation("DepartmentEmployees")
+  allocations  Allocation[]
+}
+
+model AssetCategory {
+  id           Int      @id @default(autoincrement())
+  name         String   @unique
+  customFields String   @default("[]") // JSON array of custom field templates (e.g. warranty period)
+  assets       Asset[]
+}
+
+model Asset {
+  id                  Int                  @id @default(autoincrement())
+  tag                 String               @unique // e.g. AF-0001
+  name                String
+  serialNumber        String               @unique
+  categoryId          Int
+  category            AssetCategory        @relation(fields: [categoryId], references: [id])
+  acquisitionDate     DateTime
+  acquisitionCost     Float
+  condition           String               @default("Good") // New, Good, Fair, Poor
+  location            String
+  photoUrl            String?
+  documentUrl         String?
+  isBookable          Boolean              @default(false)
+  status              String               @default("Available") // Available, Allocated, Reserved, UnderMaintenance, Lost, Retired, Disposed
+  
+  allocations         Allocation[]
+  bookings            ResourceBooking[]
+  maintenanceRequests MaintenanceRequest[]
+  auditItems          AuditItem[]
+  transfers           TransferRequest[]
+}
+
+model Allocation {
+  id                 Int         @id @default(autoincrement())
+  assetId            Int
+  asset              Asset       @relation(fields: [assetId], references: [id])
+  employeeId         Int?
+  employee           Employee?   @relation(fields: [employeeId], references: [id])
+  departmentId       Int?
+  department         Department? @relation(fields: [departmentId], references: [id])
+  allocatedDate      DateTime    @default(now())
+  expectedReturnDate DateTime?
+  returnedDate       DateTime?
+  conditionOnCheckIn String?
+  status             String      @default("Active") // Active, Returned, Overdue
+}
+
+model TransferRequest {
+  id             Int       @id @default(autoincrement())
+  assetId        Int
+  asset          Asset     @relation(fields: [assetId], references: [id])
+  fromEmployeeId Int
+  fromEmployee   Employee  @relation("TransferFrom", fields: [fromEmployeeId], references: [id])
+  toEmployeeId   Int
+  toEmployee     Employee  @relation("TransferTo", fields: [toEmployeeId], references: [id])
+  reason         String
+  status         String    @default("Pending") // Pending, Approved, Rejected
+  approvedById   Int?
+  approvedBy     Employee? @relation("ApprovedBy", fields: [approvedById], references: [id])
+  approvedDate   DateTime?
+}
+
+model ResourceBooking {
+  id         Int      @id @default(autoincrement())
+  assetId    Int
+  asset      Asset    @relation(fields: [assetId], references: [id])
+  employeeId Int
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  startDate  DateTime
+  endDate    DateTime
+  status     String   @default("Upcoming") // Upcoming, Ongoing, Completed, Cancelled
+}
+
+model MaintenanceRequest {
+  id                   Int       @id @default(autoincrement())
+  assetId              Int
+  asset                Asset     @relation(fields: [assetId], references: [id])
+  employeeId           Int
+  employee             Employee  @relation(fields: [employeeId], references: [id])
+  description          String
+  priority             String    @default("Medium") // Low, Medium, High, Critical
+  status               String    @default("Pending") // Pending, Approved, Rejected, Assigned, InProgress, Resolved
+  assignedTechnicianId Int?
+  photoUrl             String?
+  resolutionNotes      String?
+  createdDate          DateTime  @default(now())
+}
+
+model AuditCycle {
+  id        Int         @id @default(autoincrement())
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  status    String      @default("Active") // Active, Closed
+  auditorId Int
+  auditor   Employee    @relation(fields: [auditorId], references: [id])
+  items     AuditItem[]
+}
+
+model AuditItem {
+  id           Int        @id @default(autoincrement())
+  cycleId      Int
+  cycle        AuditCycle @relation(fields: [cycleId], references: [id])
+  assetId      Int
+  asset        Asset      @relation(fields: [assetId], references: [id])
+  status       String     @default("Pending") // Pending, Verified, Missing, Damaged
+  verifiedDate DateTime?
+}
+
+model ActivityLog {
+  id         Int       @id @default(autoincrement())
+  employeeId Int?
+  employee   Employee? @relation(fields: [employeeId], references: [id])
+  action     String
+  details    String
+  timestamp  DateTime  @default(now())
+}
