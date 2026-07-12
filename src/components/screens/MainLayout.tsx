@@ -39,6 +39,27 @@ export default function MainLayout({
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem("theme") as "light" | "dark";
+    if (savedTheme) {
+      setTheme(savedTheme);
+      document.documentElement.setAttribute("data-theme", savedTheme);
+    } else {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const initial = prefersDark ? "dark" : "light";
+      setTheme(initial);
+      document.documentElement.setAttribute("data-theme", initial);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const nextTheme = theme === "light" ? "dark" : "light";
+    setTheme(nextTheme);
+    document.documentElement.setAttribute("data-theme", nextTheme);
+    localStorage.setItem("theme", nextTheme);
+  };
 
   const fetchNotifs = async () => {
     try {
@@ -155,6 +176,28 @@ export default function MainLayout({
               )}
             </span>
             <span>Alerts</span>
+          </button>
+          
+          <button
+            onClick={toggleTheme}
+            className="text-xs transition-colors text-(--sidebar-muted) hover:text-(--sidebar-fg) flex items-center gap-1.5"
+            title="Toggle color theme"
+          >
+            {theme === "light" ? (
+              <>
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+                </svg>
+                <span>Dark</span>
+              </>
+            ) : (
+              <>
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m0 13.5V21M9.75 12h4.5M3 12h2.25m13.5 0H21M5.757 6.543l1.591 1.591m8.889 8.89l1.591 1.591M5.757 17.457l1.591-1.591M16.243 7.757l1.591-1.591M12 7.5A4.5 4.5 0 1012 16.5 4.5 4.5 0 0012 7.5z" />
+                </svg>
+                <span>Light</span>
+              </>
+            )}
           </button>
           
           <button

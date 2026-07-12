@@ -25,7 +25,16 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
   const [showRegForm, setShowRegForm] = useState(false);
 
   // Search/Filters
+  const [searchVal, setSearchVal] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setSearchQuery(searchVal);
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [searchVal]);
+
   const [filterCategory, setFilterCategory] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
 
@@ -359,8 +368,8 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
       <div className="erp-card bg-(--surface) p-4 flex flex-col md:flex-row gap-3">
         <input
           type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          value={searchVal}
+          onChange={(e) => setSearchVal(e.target.value)}
           className="erp-input flex-1"
           placeholder="Search by tag, name, or serial number..."
         />
