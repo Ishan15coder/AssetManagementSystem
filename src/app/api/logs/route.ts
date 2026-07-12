@@ -17,6 +17,10 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    if (user.role !== "Admin" && user.role !== "AssetManager") {
+      return NextResponse.json({ error: "Forbidden: Management privileges required" }, { status: 403 });
+    }
+
     const logs = await db.activityLog.findMany({
       include: {
         employee: { select: { id: true, name: true, email: true } },

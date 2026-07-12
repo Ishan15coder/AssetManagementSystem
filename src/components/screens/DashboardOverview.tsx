@@ -94,11 +94,6 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
   return (
     <div
       className="space-y-8"
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? "translateY(0)" : "translateY(12px)",
-        transition: "opacity 320ms ease, transform 320ms ease",
-      }}
     >
       {/* Heading */}
       <div>
@@ -161,7 +156,7 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Overdue */}
         <div
-          className="lg:col-span-3"
+          className={isManager ? "lg:col-span-3" : "lg:col-span-5"}
           style={{
             opacity: visible ? 1 : 0,
             transform: visible ? "translateY(0)" : "translateY(14px)",
@@ -178,115 +173,114 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
             {loading ? (
               <div className="space-y-3">
                 {[...Array(3)].map((_, i) => (
-                  <div key={i} className="flex items-center justify-between py-2 border-b border-(--border-subtle)">
-                    <div className="space-y-2">
-                      <div className="h-3.5 w-16 skeleton" />
-                      <div className="h-4 w-44 skeleton" />
-                    </div>
-                    <div className="h-3.5 w-24 skeleton" />
-                    <div className="h-5 w-12 rounded-full skeleton" />
-                  </div>
+                  <div key={i} className="h-10 rounded-(--radius-sm) animate-pulse" style={{ background: "var(--surface-2)" }} />
                 ))}
               </div>
-            ) : overdueItems.length === 0 ? (
-              <div className="flex flex-col items-center justify-center p-8 border border-dashed border-(--border) rounded-(--radius-md) text-center space-y-3 bg-white/5">
-                <div className="h-10 w-10 rounded-full flex items-center justify-center bg-green-500/10 border border-green-500/20 text-green-500">
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-(--fg)">All Clear</h3>
-                  <p className="text-xs text-(--muted) mt-0.5">No overdue return handovers registered in the system.</p>
-                </div>
-              </div>
             ) : (
-              <div className="w-full overflow-x-auto">
-                <table className="erp-table min-w-full">
-                  <thead>
-                    <tr>
-                      <th>Tag</th>
-                      <th>Asset</th>
-                      <th>Held by</th>
-                      <th>Overdue</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {overdueItems.map((item, i) => (
-                      <tr key={i}>
-                        <td><span className="tech-code font-medium" style={{ color: "var(--accent)" }}>{item.assetTag}</span></td>
-                        <td className="font-semibold" style={{ color: "var(--fg)" }}>{item.assetName}</td>
-                        <td style={{ color: "var(--fg)" }}>{item.employeeName ?? item.departmentName ?? "Unassigned"}</td>
-                        <td><span className="badge badge-danger tabular-nums">{item.days}d</span></td>
-                        <td className="text-right">
-                          {isManager && (
-                            <button
-                              onClick={() => setActiveScreen("allocations")}
-                              className="text-xs font-semibold text-(--accent) hover:underline"
-                            >
-                              Resolve
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-4">
+                {overdueItems.length === 0 ? (
+                  <div className="text-center py-8">
+                    <div className="inline-flex items-center justify-center h-12 w-12 rounded-full mb-3" style={{ background: "var(--surface-2)" }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--muted)" }}>
+                        <path d="M5 12l5 5l10 -10"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold" style={{ color: "var(--fg)" }}>All clear</p>
+                      <p className="text-xs text-(--muted) mt-0.5">No overdue return handovers registered in the system.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-full overflow-x-auto">
+                    <table className="erp-table min-w-full">
+                      <thead>
+                        <tr>
+                          <th>Tag</th>
+                          <th>Asset</th>
+                          <th>Held by</th>
+                          <th>Overdue</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {overdueItems.map((item, i) => (
+                          <tr key={i}>
+                            <td><span className="tech-code font-medium" style={{ color: "var(--accent)" }}>{item.assetTag}</span></td>
+                            <td className="font-semibold" style={{ color: "var(--fg)" }}>{item.assetName}</td>
+                            <td style={{ color: "var(--fg)" }}>{item.employeeName ?? item.departmentName ?? "Unassigned"}</td>
+                            <td><span className="badge badge-danger tabular-nums">{item.days}d</span></td>
+                            <td className="text-right">
+                              {isManager && (
+                                <button
+                                  onClick={() => setActiveScreen("allocations")}
+                                  className="text-xs font-semibold text-(--accent) hover:underline"
+                                >
+                                  Resolve
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
 
         {/* Recent activity */}
-        <div
-          className="lg:col-span-2"
-          style={{
-            opacity: visible ? 1 : 0,
-            transform: visible ? "translateY(0)" : "translateY(14px)",
-            transition: "opacity 340ms ease 280ms, transform 340ms ease 280ms",
-          }}
-        >
-          <div className="ui-card h-full">
-            <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--fg)" }}>Recent activity</h2>
-            {loading ? (
-              <div className="space-y-3">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="h-10 rounded-(--radius-sm) animate-pulse" style={{ background: "var(--surface-2)" }} />
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-0">
-                {recentLogs.length === 0 ? (
-                  <p className="text-sm" style={{ color: "var(--muted)" }}>No recent activity.</p>
-                ) : recentLogs.map((log, i) => (
-                  <div
-                    key={log.id}
-                    className="py-2.5 border-b last:border-0"
-                    style={{
-                      borderColor: "var(--border-subtle)",
-                      opacity: visible ? 1 : 0,
-                      transform: visible ? "translateY(0)" : "translateY(6px)",
-                      transition: `opacity 260ms ease ${320 + i * 35}ms, transform 260ms ease ${320 + i * 35}ms`,
-                    }}
-                  >
-                    <div className="flex justify-between gap-3 items-baseline">
-                      <p className="text-sm font-medium leading-snug" style={{ color: "var(--fg)" }}>
-                        {humanizeAction(log.action)}
-                      </p>
-                      <span className="text-xs shrink-0 tabular-nums" style={{ color: "var(--muted)" }}>
-                        {timeAgo(log.timestamp)}
-                      </span>
+        {isManager && (
+          <div
+            className="lg:col-span-2"
+            style={{
+              opacity: visible ? 1 : 0,
+              transform: visible ? "translateY(0)" : "translateY(14px)",
+              transition: "opacity 340ms ease 280ms, transform 340ms ease 280ms",
+            }}
+          >
+            <div className="ui-card h-full">
+              <h2 className="text-sm font-semibold mb-4" style={{ color: "var(--fg)" }}>Recent activity</h2>
+              {loading ? (
+                <div className="space-y-3">
+                  {[...Array(4)].map((_, i) => (
+                    <div key={i} className="h-10 rounded-(--radius-sm) animate-pulse" style={{ background: "var(--surface-2)" }} />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-0">
+                  {recentLogs.length === 0 ? (
+                    <p className="text-sm" style={{ color: "var(--muted)" }}>No recent activity.</p>
+                  ) : recentLogs.map((log, i) => (
+                    <div
+                      key={log.id}
+                      className="py-2.5 border-b last:border-0"
+                      style={{
+                        borderColor: "var(--border-subtle)",
+                        opacity: visible ? 1 : 0,
+                        transform: visible ? "translateY(0)" : "translateY(6px)",
+                        transition: `opacity 260ms ease ${320 + i * 35}ms, transform 260ms ease ${320 + i * 35}ms`,
+                      }}
+                    >
+                      <div className="flex justify-between gap-3 items-baseline">
+                        <p className="text-sm font-medium leading-snug" style={{ color: "var(--fg)" }}>
+                          {humanizeAction(log.action)}
+                        </p>
+                        <span className="text-xs shrink-0 tabular-nums" style={{ color: "var(--muted)" }}>
+                          {timeAgo(log.timestamp)}
+                        </span>
+                      </div>
+                      {log.details && (
+                        <p className="text-xs mt-0.5 truncate" style={{ color: "var(--muted)" }}>{log.details}</p>
+                      )}
                     </div>
-                    {log.details && (
-                      <p className="text-xs mt-0.5 truncate" style={{ color: "var(--muted)" }}>{log.details}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

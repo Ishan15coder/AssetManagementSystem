@@ -19,7 +19,7 @@ const menuItems = [
   { id: "maintenance", label: "Maintenance"             },
   { id: "audits",      label: "Audits"                  },
   { id: "reports",     label: "Reports",       managerOnly: true },
-  { id: "logs",        label: "Activity logs"           },
+  { id: "logs",        label: "Activity logs", managerOnly: true },
 ];
 
 const roleLabel: Record<string, string> = {
