@@ -53,7 +53,7 @@ export async function PUT(
       // Recursively trace up the parent chain to ensure no circular references are created
       let currentParentId: number | null = targetParentId;
       while (currentParentId) {
-        const parentDept = await db.department.findUnique({
+        const parentDept: any = await db.department.findUnique({
           where: { id: currentParentId },
           select: { id: true, parentId: true }
         });
