@@ -275,7 +275,7 @@ export default function AssetAllocation({ user }: AssetAllocationProps) {
           <div className="space-y-3">
             <h2 className="text-xs font-semibold text-(--muted)">Active Handovers</h2>
             <div className="overflow-x-auto border border-(--border) bg-(--surface) rounded-(--radius-md) overflow-hidden">
-              <table className="erp-table">
+              <table className="erp-table min-w-[650px] w-full">
                 <thead>
                   <tr>
                     <th>Tag</th>
@@ -328,7 +328,7 @@ export default function AssetAllocation({ user }: AssetAllocationProps) {
             <div className="space-y-3">
               <h2 className="text-xs font-semibold text-(--muted)">Pending Transfer Requests</h2>
               <div className="overflow-x-auto border border-(--border) bg-(--surface) rounded-(--radius-md) overflow-hidden">
-                <table className="erp-table">
+                <table className="erp-table min-w-[750px] w-full">
                   <thead>
                     <tr>
                       <th>Asset</th>

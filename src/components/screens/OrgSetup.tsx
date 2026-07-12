@@ -299,7 +299,7 @@ export default function OrgSetup({ user }: OrgSetupProps) {
           <div className="lg:col-span-2 space-y-4">
             <h2 className="text-sm font-semibold text-(--fg)">Registered departments</h2>
             <div className="overflow-x-auto border border-(--border) bg-(--surface) rounded-(--radius-md) overflow-hidden">
-              <table className="erp-table">
+              <table className="erp-table min-w-[650px] w-full">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -406,7 +406,7 @@ export default function OrgSetup({ user }: OrgSetupProps) {
           <div className="lg:col-span-2 space-y-4">
             <h2 className="text-sm font-semibold text-(--fg)">Asset categories</h2>
             <div className="overflow-x-auto border border-(--border) bg-(--surface) rounded-(--radius-md) overflow-hidden">
-              <table className="erp-table">
+              <table className="erp-table min-w-[550px] w-full">
                 <thead>
                   <tr>
                     <th>Category ID</th>
@@ -522,7 +522,7 @@ export default function OrgSetup({ user }: OrgSetupProps) {
         <div className="space-y-4">
           <h2 className="text-sm font-semibold text-(--fg)">Employee directory</h2>
           <div className="overflow-x-auto border border-(--border) bg-(--surface) rounded-(--radius-md) overflow-hidden">
-            <table className="erp-table">
+            <table className="erp-table min-w-[750px] w-full">
               <thead>
                 <tr>
                   <th>Employee</th>

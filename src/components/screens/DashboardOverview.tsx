@@ -184,36 +184,37 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
             ) : overdueItems.length === 0 ? (
               <p className="text-sm py-4 text-center" style={{ color: "var(--muted)" }}>No overdue assets — all clear.</p>
             ) : (
-              <table className="erp-table">
-                <thead>
-                  <tr>
-                    <th>Tag</th>
-                    <th>Asset</th>
-                    <th>Held by</th>
-                    <th>Overdue</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {overdueItems.map((item, i) => (
-                    <tr key={i}>
-                      <td><span className="tech-code font-medium" style={{ color: "var(--accent)" }}>{item.assetTag}</span></td>
-                      <td className="font-medium" style={{ color: "var(--fg)" }}>{item.assetName}</td>
-                      <td style={{ color: "var(--muted)" }}>{item.employee?.name ?? "—"}</td>
-                      <td><span className="badge badge-danger">{item.days}d</span></td>
-                      <td>
-                        <button
-                          onClick={() => setActiveScreen("allocations")}
-                          className="text-xs font-medium underline-offset-2 hover:underline transition-colors"
-                          style={{ color: "var(--fg)" }}
-                        >
-                          Resolve
-                        </button>
-                      </td>
+              <div className="w-full overflow-x-auto">
+                <table className="erp-table min-w-full">
+                  <thead>
+                    <tr>
+                      <th>Tag</th>
+                      <th>Asset</th>
+                      <th>Held by</th>
+                      <th>Overdue</th>
+                      <th></th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {overdueItems.map((item, i) => (
+                      <tr key={i}>
+                        <td><span className="tech-code font-medium" style={{ color: "var(--accent)" }}>{item.assetTag}</span></td>
+                        <td className="font-semibold" style={{ color: "var(--fg)" }}>{item.assetName}</td>
+                        <td style={{ color: "var(--fg)" }}>{item.employeeName ?? item.departmentName ?? "Unassigned"}</td>
+                        <td><span className="badge badge-danger tabular-nums">{item.days}d</span></td>
+                        <td className="text-right">
+                          <button
+                            onClick={() => setActiveScreen("allocations")}
+                            className="text-xs font-semibold text-(--accent) hover:underline"
+                          >
+                            Resolve
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </div>

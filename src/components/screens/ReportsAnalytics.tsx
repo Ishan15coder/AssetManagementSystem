@@ -332,7 +332,7 @@ export default function ReportsAnalytics() {
             </button>
           </div>
           <div className="overflow-x-auto border border-(--border) bg-(--surface) rounded-(--radius-md) overflow-hidden mt-2">
-            <table className="erp-table">
+            <table className="erp-table min-w-[750px] w-full">
               <thead>
                 <tr>
                   <th>Asset Tag</th>
@@ -457,7 +457,7 @@ export default function ReportsAnalytics() {
             <div className="space-y-3">
               <span className="text-[10px] uppercase font-bold text-(--muted)">Value by Category</span>
               <div className="overflow-x-auto border border-(--border) rounded-(--radius-md) overflow-hidden">
-                <table className="erp-table">
+                <table className="erp-table min-w-[500px] w-full">
                   <thead>
                     <tr>
                       <th>Category</th>

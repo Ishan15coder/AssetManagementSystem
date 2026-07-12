@@ -1,7 +1,19 @@
 const { PrismaClient } = require("@prisma/client");
+const { PrismaLibSQL } = require("@prisma/adapter-libsql");
 const bcrypt = require("bcryptjs");
 
-const prisma = new PrismaClient();
+let prisma;
+if (process.env.TURSO_DATABASE_URL && process.env.TURSO_AUTH_TOKEN) {
+  console.log("Seeding Turso Cloud Database...");
+  const adapter = new PrismaLibSQL({
+    url: process.env.TURSO_DATABASE_URL,
+    authToken: process.env.TURSO_AUTH_TOKEN,
+  });
+  prisma = new PrismaClient({ adapter });
+} else {
+  console.log("Seeding local SQLite Database...");
+  prisma = new PrismaClient();
+}
 
 async function main() {
   // Clear existing database records to ensure clean slate

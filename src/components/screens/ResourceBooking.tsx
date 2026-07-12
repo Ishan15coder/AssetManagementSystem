@@ -207,7 +207,7 @@ export default function ResourceBooking({ user }: ResourceBookingProps) {
         <div className="lg:col-span-2 space-y-4">
           <h2 className="text-xs font-semibold text-(--muted)">Schedule Calendar</h2>
           <div className="overflow-x-auto border border-(--border) bg-(--surface) rounded-(--radius-md) overflow-hidden">
-            <table className="erp-table">
+            <table className="erp-table min-w-[650px] w-full">
               <thead>
                 <tr>
                   <th>Reservee</th>

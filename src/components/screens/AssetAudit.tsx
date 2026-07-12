@@ -299,7 +299,7 @@ export default function AssetAudit({ user }: AssetAuditProps) {
             </div>
 
             <div className="overflow-x-auto border border-(--border) bg-(--surface) rounded-(--radius-md) overflow-hidden">
-              <table className="erp-table">
+              <table className="erp-table min-w-[650px] w-full">
                 <thead>
                   <tr>
                     <th>Tag</th>
