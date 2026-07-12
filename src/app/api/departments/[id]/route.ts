@@ -43,9 +43,28 @@ export async function PUT(
       }
     }
 
-    // Verify parent ID hierarchy loops (a department cannot be its own parent)
-    if (parentId && parseInt(parentId) === departmentId) {
-      return NextResponse.json({ error: "A department cannot be its own parent scope" }, { status: 400 });
+    // Verify parent ID hierarchy loops (a department cannot be its own parent or a descendant)
+    if (parentId) {
+      const targetParentId = parseInt(parentId);
+      if (targetParentId === departmentId) {
+        return NextResponse.json({ error: "A department cannot be its own parent scope" }, { status: 400 });
+      }
+
+      // Recursively trace up the parent chain to ensure no circular references are created
+      let currentParentId: number | null = targetParentId;
+      while (currentParentId) {
+        const parentDept = await db.department.findUnique({
+          where: { id: currentParentId },
+          select: { id: true, parentId: true }
+        });
+        if (!parentDept) break;
+        if (parentDept.parentId === departmentId) {
+          return NextResponse.json({
+            error: "Cyclical hierarchy loop detected: Selected parent department is already a sub-department of this one."
+          }, { status: 400 });
+        }
+        currentParentId = parentDept.parentId;
+      }
     }
 
     const updatedDept = await db.department.update({

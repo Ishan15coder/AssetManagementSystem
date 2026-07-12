@@ -17,6 +17,50 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // Auto-generate reminders for resource bookings starting in the next 1 hour
+    const now = new Date();
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+
+    const upcomingBookings = await db.resourceBooking.findMany({
+      where: {
+        employeeId: user.id,
+        status: "Upcoming",
+        startDate: {
+          gte: now,
+          lte: oneHourFromNow,
+        },
+      },
+      include: {
+        asset: { select: { name: true, tag: true } },
+      },
+    });
+
+    for (const booking of upcomingBookings) {
+      const title = `Booking Reminder`;
+      const detailsPrefix = `Your booking for ${booking.asset.name} (${booking.asset.tag})`;
+      
+      const existing = await db.notification.findFirst({
+        where: {
+          employeeId: user.id,
+          title,
+          details: { contains: detailsPrefix },
+        },
+      });
+
+      if (!existing) {
+        const minutesLeft = Math.round((new Date(booking.startDate).getTime() - now.getTime()) / (60 * 1000));
+        await db.notification.create({
+          data: {
+            employeeId: user.id,
+            title,
+            details: `${detailsPrefix} starts in ${minutesLeft} minutes.`,
+            type: "Reminder",
+            isRead: false,
+          },
+        });
+      }
+    }
+
     const notifications = await db.notification.findMany({
       where: { employeeId: user.id },
       orderBy: { createdDate: "desc" },
