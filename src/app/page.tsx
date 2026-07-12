@@ -55,11 +55,8 @@ export default function Home() {
 
   if (showLoader) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-(--bg) px-6 relative overflow-hidden mesh-bg">
-      <div className="w-full max-w-xs space-y-5 text-center z-10">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-extrabold tracking-tight text-(--fg)">AssetFlow</h1>
-          <p className="text-[10px] uppercase tracking-widest text-(--muted) font-bold">System Ledger Node</p>
-        </div>
+      <div className="w-full max-w-xs space-y-4 text-center z-10">
+        <h1 className="text-3xl font-extrabold tracking-tight text-(--fg)">AssetFlow</h1>
 
         <div className="space-y-2">
           {/* Progress bar */}
@@ -69,11 +66,8 @@ export default function Home() {
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="flex justify-between items-center text-[9px] text-(--muted) font-semibold uppercase tracking-wider tech-code">
-            <span>
-              {progress < 35 ? "Checking session..." : progress < 75 ? "Syncing database index..." : "Decrypting tokens..."}
-            </span>
-            <span className="tabular-nums">{progress}%</span>
+          <div className="text-right text-[10px] text-(--muted) font-semibold tech-code tabular-nums">
+            {progress}%
           </div>
         </div>
       </div>
