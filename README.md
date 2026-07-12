@@ -87,7 +87,7 @@ Managing who holds what, with clear conflict rules:
 - Allocate an asset to an employee or department, with an optional Expected Return Date
 - **Conflict prevention**: If an asset is already allocated, the system blocks re-allocation, shows who currently holds it, and surfaces a Transfer Request button instead
 - **Transfer workflow**: Requested → Approved (by Asset Manager or Department Head) → Re-allocated, with history updated automatically
-- **Return flow**: Mark returned, capture a condition check-in note, asset reverts to Available
+- **Return flow**: Mark returned, capture a condition check-in note, asset status reverts to Available
 - Overdue allocations are automatically flagged and surfaced in the Dashboard and Notifications
 
 ### Resource Booking
@@ -136,6 +136,49 @@ A complete record of everything that happens in the system:
 
 - Notifications for: asset assignments, maintenance approvals/rejections, booking confirmations and reminders, transfer approvals, overdue return alerts, audit discrepancy flags
 - Full audit log of all admin, manager, and employee actions — who did what and when
+
+---
+
+## Smart Validation & Edge Cases Handled
+
+Enterprise software requires strict business rules. AssetFlow handles several critical edge cases out-of-the-box:
+
+- **The Double-Allocation Shield**: If two managers try to allocate the same physical asset (e.g., a specific vehicle) at the exact same time, the system uses concurrency locking to resolve the first request and gracefully rejects the second with a clear conflict status.
+- **State-Transition Integrity**: An asset marked as `Disposed` or `Retired` can never be transitioned back to `Allocated` or `Available`. This prevents security and accounting fraud.
+- **Booking Overlaps Down to the Millisecond**: Booking time-slot checks use non-inclusive boundaries. A booking ending at `10:00` allows the next booking to start exactly at `10:00` without triggering a false conflict.
+- **Safe Auditing Loop**: When an audit cycle is closed, the system only updates assets to `Lost` if they were explicitly flagged as `Missing`. It preserves histories and prevents bulk corruption.
+
+---
+
+## Security & Data Hardening
+
+AssetFlow is architected with a security-first approach to protect sensitive organizational rosters and asset histories:
+
+- **JWT Role Enforcement**: Decoding and authorization happen entirely on the server. If a client attempts to bypass the UI to call `/api/employees/:id/promote` or access Admin-only pages, the request is rejected with a `403 Forbidden` response.
+- **Cryptographic Protections**: All employee passwords are salted and hashed using `bcryptjs` before storage. Plain-text passwords never touch the database.
+- **Immutable Log Trails**: High-privilege actions (like role promotions, asset disposals, and audit lockouts) are logged to an append-only log in the database that cannot be modified or cleared via standard API endpoints.
+- **Input Sanitization**: All incoming data parameters are strictly validated using `express-validator` to prevent script injections and malformed payloads.
+
+---
+
+## Database Entity Relationships
+
+Even though the system runs on a lightweight JSON document store, it maintains clear relational integrity:
+
+```mermaid
+erDiagram
+    EMPLOYEE ||--o{ ALLOCATION : holds
+    EMPLOYEE ||--o{ BOOKING : reserves
+    EMPLOYEE ||--o{ AUDIT-CYCLE : conducts
+    DEPARTMENT ||--o{ EMPLOYEE : employs
+    DEPARTMENT ||--o{ ALLOCATION : occupies
+    ASSET-CATEGORY ||--o{ ASSET : classifies
+    ASSET ||--o{ ALLOCATION : undergoes
+    ASSET ||--o{ BOOKING : schedules
+    ASSET ||--o{ MAINTENANCE-REQUEST : requires
+    AUDIT-CYCLE ||--o{ AUDIT-ITEM : contains
+    ASSET ||--o{ AUDIT-ITEM : verified-in
+```
 
 ---
 
@@ -336,6 +379,17 @@ A role switcher in the UI lets you jump between accounts without re-entering cre
 ## Design
 
 The UI is built around a dark glassmorphism design system — deep slate surfaces (`#161d30`) on a rich dark background (`#0b0f19`), with indigo and mint accents for state indicators. Navigation adapts in real time based on the authenticated user's role. Analytics are rendered with Chart.js, including a booking heatmap and utilization breakdowns.
+
+---
+
+## Future Roadmap
+
+Planned enhancements to turn AssetFlow into a fully-featured enterprise ecosystem:
+
+1. **Native Barcode & QR Scanner Integration**: Allow field agents to scan physical asset labels using their mobile device's camera to instantly view histories or perform check-ins.
+2. **Third-Party Notifications**: Push alerts for overdue returns, maintenance approvals, and booking reminders directly to Slack, Microsoft Teams, or email.
+3. **Predictive Maintenance Scheduling**: Analyze historical breakdown frequencies to automatically generate preventative maintenance tasks before an asset fails.
+4. **Offline Sync**: Enable auditors working in remote locations/warehouses with poor connectivity to perform audit cycles offline and sync changes once back online.
 
 ---
 
