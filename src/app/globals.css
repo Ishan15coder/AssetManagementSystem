@@ -9,14 +9,14 @@
   --border:        oklch(84%  0.016 80);
   --border-subtle: oklch(90%  0.01  80);
 
-  /* Sidebar: near-black warm */
-  --sidebar-bg:        oklch(13%  0.006 80);
+  /* Sidebar: dark oatmeal */
+  --sidebar-bg:        oklch(18%  0.01 75);
   --sidebar-fg:        oklch(96%  0.008 80);
   --sidebar-muted:     oklch(52%  0.008 80);
-  --sidebar-hover:     oklch(19%  0.006 80);
+  --sidebar-hover:     oklch(23%  0.01 75);
   --sidebar-active:    oklch(94%  0.012 80);   /* bright cream text when active */
-  --sidebar-active-bg: oklch(22%  0.006 80);   /* slightly lighter dark pill */
-  --sidebar-border:    oklch(21%  0.005 80);
+  --sidebar-active-bg: oklch(25%  0.01 75);   /* slightly lighter dark pill */
+  --sidebar-border:    oklch(22%  0.008 75);
 
   /* Content text */
   --fg:            oklch(14%  0.008 80);
@@ -77,6 +77,15 @@ html[data-theme="dark"] {
   --sidebar-active:    oklch(98%  0.005 80);
   --sidebar-active-bg: oklch(19%  0.006 80);
   --sidebar-border:    oklch(18%  0.005 80);
+}
+
+/* Dark theme specific mesh gradients to prevent light colors overlay */
+html[data-theme="dark"] .mesh-bg {
+  background-image:
+    radial-gradient(ellipse at 15%  15%, oklch(17% 0.008 80  / 0.55) 0%, transparent 55%),
+    radial-gradient(ellipse at 85%  85%, oklch(15% 0.006 80  / 0.45) 0%, transparent 50%),
+    radial-gradient(ellipse at 70%  20%, oklch(19% 0.008 80  / 0.4)  0%, transparent 45%),
+    radial-gradient(ellipse at 20%  80%, oklch(16% 0.008 80  / 0.35) 0%, transparent 50%);
 }
 
 /* ─── Tailwind bridge ──────────────────────────────────────────── */
