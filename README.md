@@ -34,7 +34,7 @@ AssetFlow is built for any organization that manages physical assets or shared s
 Signup creates an Employee account — no role selection at registration. Admins promote employees to Department Head or Asset Manager from the Employee Directory. This is the only place roles are assigned, preventing self-elevation.
 
 - Email/password login with JWT-based session management
-- Forgot password flow
+- Forgot password   flow
 - All authorization enforced server-side via Next.js Route Handlers and Server Actions
 
 ### Dashboard & KPI Overview
