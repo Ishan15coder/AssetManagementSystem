@@ -420,6 +420,7 @@ export default function AssetDirectory({ user }: AssetDirectoryProps) {
             <CustomSelect
               value=""
               onChange={(val) => handleBulkAction("UPDATE_STATUS", val as string)}
+              className="w-44"
               options={[
                 { value: "", label: "Change Status..." },
                 { value: "Available", label: "Set Available" },

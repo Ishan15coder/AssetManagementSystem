@@ -186,8 +186,61 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
     }
   };
 
-  const humanizeAction = (a: string) =>
-    a.replace(/([A-Z])/g, " $1").trim().toLowerCase().replace(/^./, s => s.toUpperCase());
+  const ACTION_LABELS: Record<string, string> = {
+    RegisterAsset:       "Asset registered",
+    UpdateAsset:         "Asset updated",
+    DeleteAsset:         "Asset deleted",
+    AllocateAsset:       "Asset allocated",
+    ReturnAsset:         "Asset returned",
+    TransferAsset:       "Asset transferred",
+    CreateBooking:       "Booking created",
+    CancelBooking:       "Booking cancelled",
+    CreateMaintenance:   "Maintenance request raised",
+    UpdateMaintenance:   "Maintenance status updated",
+    CloseMaintenance:    "Maintenance closed",
+    CreateAudit:         "Audit cycle started",
+    UpdateAuditItem:     "Audit item checked",
+    CloseAudit:          "Audit cycle closed",
+    PromoteEmployee:     "Employee promoted",
+    CreateDepartment:    "Department created",
+    CreateCategory:      "Category created",
+    Login:               "User signed in",
+    Logout:              "User signed out",
+  };
+
+  const humanizeAction = (a: string) => {
+    if (ACTION_LABELS[a]) return ACTION_LABELS[a];
+    return a.replace(/([A-Z])/g, " $1").trim().toLowerCase().replace(/^./, s => s.toUpperCase());
+  };
+
+  const formatDetails = (detailsStr: string) => {
+    try {
+      const data = JSON.parse(detailsStr);
+      if (data.before && data.after) {
+        const changes = Object.keys(data.after).map((key) => {
+          const oldVal = data.before[key];
+          const newVal = data.after[key];
+          if (oldVal === newVal) return null;
+          return (
+            <div key={key} className="flex items-start gap-2 text-[10px] font-mono mt-0.5 leading-tight">
+              <span className="text-(--muted) w-14 shrink-0 truncate">{key}:</span>
+              {oldVal !== undefined && oldVal !== "" && (
+                <span className="text-(--danger-text) line-through mr-1 break-all">{String(oldVal)}</span>
+              )}
+              <span className="text-(--success-text) break-all">{String(newVal)}</span>
+            </div>
+          );
+        }).filter(Boolean);
+        
+        if (changes.length > 0) {
+          return <div className="mt-1 space-y-0.5 bg-black/10 p-1.5 rounded-sm border border-white/5">{changes}</div>;
+        }
+      }
+    } catch {
+      // not JSON
+    }
+    return <span className="block text-xs text-(--muted) mt-0.5 break-all">{detailsStr}</span>;
+  };
 
   function timeAgo(ts: string) {
     const diff = Date.now() - new Date(ts).getTime();
@@ -398,13 +451,19 @@ export default function DashboardOverview({ user, setActiveScreen }: DashboardOv
                       {/* Timeline Dot */}
                       <div className="absolute left-[-5px] top-1.5 h-2.5 w-2.5 rounded-full" style={{ background: "var(--accent)", boxShadow: "0 0 0 4px var(--surface)" }}></div>
                       
-                      <p className="text-sm" style={{ color: "var(--fg)" }}>
-                        <span className="font-semibold text-(--accent)">{log.employeeName || log.action}</span>{" "}
-                        <span style={{ color: "var(--muted)" }}>{log.employeeName ? log.action.toLowerCase() : ""}</span>{" "}
-                        {log.details && (
-                          <span className="font-medium" style={{ color: "var(--fg)" }}>{log.details}</span>
-                        )}
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-semibold text-sm text-(--fg)">
+                            {humanizeAction(log.action)}
+                          </span>
+                          {log.employee?.name && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-(--accent-subtle) text-(--accent) font-medium">
+                              {log.employee.name}
+                            </span>
+                          )}
+                        </div>
+                        {log.details && formatDetails(log.details)}
+                      </div>
                       <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>
                         {new Date(log.timestamp).toLocaleDateString()} at {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>

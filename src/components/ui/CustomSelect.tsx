@@ -37,7 +37,7 @@ export function CustomSelect({ value, onChange, options, className = "", placeho
       </button>
 
       {isOpen && (
-        <div className="absolute z-[999] top-full left-0 w-full mt-1 bg-(--surface) border border-(--border) rounded-sm shadow-lg overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute z-[999] top-full left-0 min-w-full w-max max-w-[320px] mt-1 bg-(--surface) border border-(--border) rounded-sm shadow-lg overflow-hidden animate-in fade-in zoom-in-95 duration-100">
           <ul className="max-h-60 overflow-y-auto py-1 scrollbar-thin">
             {options.map((opt) => (
               <li
@@ -46,10 +46,10 @@ export function CustomSelect({ value, onChange, options, className = "", placeho
                   onChange(opt.value);
                   setIsOpen(false);
                 }}
-                className={`px-3 py-2 text-xs cursor-pointer flex items-center justify-between transition-colors hover:bg-(--surface-2) ${String(value) === String(opt.value) ? "bg-(--surface-2) text-(--accent) font-semibold" : "text-(--fg)"}`}
+                className={`pl-3 pr-8 py-2 text-xs cursor-pointer flex items-center justify-between transition-colors hover:bg-(--surface-2) ${String(value) === String(opt.value) ? "bg-(--surface-2) text-(--accent) font-semibold" : "text-(--fg)"}`}
               >
                 <span className="truncate pr-2">{opt.label}</span>
-                {String(value) === String(opt.value) && <Check size={14} className="shrink-0 text-(--success)" />}
+                {String(value) === String(opt.value) && <Check size={14} className="shrink-0 text-(--success) ml-3" />}
               </li>
             ))}
           </ul>
